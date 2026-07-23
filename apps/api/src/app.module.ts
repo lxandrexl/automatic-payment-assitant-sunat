@@ -5,6 +5,7 @@ import { HealthController } from './health.controller';
 import { AlertsModule } from './alerts/alerts.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { InvoicesModule } from './invoices/invoices.module';
+import { NotifyModule } from './notify/notify.module';
 import { PeriodsModule } from './periods/periods.module';
 import { PurchasesModule } from './purchases/purchases.module';
 import { SettingsModule } from './settings/settings.module';
@@ -18,6 +19,7 @@ import { SettingsModule } from './settings/settings.module';
     PurchasesModule,
     AlertsModule,
     DashboardModule,
+    NotifyModule,
   ],
   controllers: [HealthController],
 })

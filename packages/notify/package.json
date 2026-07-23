@@ -1,0 +1,21 @@
+{
+  "name": "@tributo/notify",
+  "version": "0.0.1",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@tributo/core": "workspace:*",
+    "nodemailer": "^6.10.0"
+  },
+  "devDependencies": {
+    "@types/nodemailer": "^6.4.17",
+    "typescript": "^5.8.3",
+    "vitest": "^2.1.9"
+  }
+}

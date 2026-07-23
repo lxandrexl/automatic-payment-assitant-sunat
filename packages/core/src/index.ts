@@ -6,3 +6,4 @@ export * from './cronograma';
 export * from './calculos';
 export * from './summary';
 export * from './proyeccion';
+export * from './recordatorios';

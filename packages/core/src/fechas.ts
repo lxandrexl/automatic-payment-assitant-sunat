@@ -21,3 +21,13 @@ export function todayLimaIso(now: Date = new Date()): string {
 export function periodOfDate(iso: string): string {
   return iso.slice(0, 7);
 }
+
+const DOW_ES = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
+
+/** "2026-08-18" → "mar 18/08/2026" (formato de los mensajes, SPEC §6). */
+export function formatFechaLima(iso: string): string {
+  const d = new Date(`${iso}T00:00:00Z`);
+  const dow = DOW_ES[d.getUTCDay()];
+  const [y, m, day] = iso.split('-');
+  return `${dow} ${day}/${m}/${y}`;
+}

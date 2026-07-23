@@ -6,7 +6,7 @@
     "node": ">=22"
   },
   "scripts": {
-    "build": "pnpm --filter @tributo/core build",
+    "build": "pnpm --filter @tributo/core build && pnpm --filter @tributo/notify build",
     "lint": "eslint .",
     "typecheck": "pnpm run build && pnpm -r typecheck",
     "test": "pnpm run build && pnpm -r test"
