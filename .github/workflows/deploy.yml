@@ -1,0 +1,26 @@
+name: Deploy
+
+# Corre SOLO cuando el workflow "CI" termina en verde sobre main (SPEC §8.2).
+on:
+  workflow_run:
+    workflows: ['CI']
+    types: [completed]
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - name: SSH deploy en la VM
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            cd ~/automatic-payment-assitant-sunat
+            git pull --ff-only
+            docker compose up -d --build
+            sleep 10
+            docker compose exec -T api wget -qO- http://127.0.0.1:3001/api/v1/health

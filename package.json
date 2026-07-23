@@ -7,6 +7,7 @@
   },
   "scripts": {
     "build": "pnpm --filter @tributo/core build && pnpm --filter @tributo/notify build",
+    "seed": "pnpm --filter @tributo/worker seed",
     "lint": "eslint .",
     "typecheck": "pnpm run build && pnpm -r typecheck",
     "test": "pnpm run build && pnpm -r test"

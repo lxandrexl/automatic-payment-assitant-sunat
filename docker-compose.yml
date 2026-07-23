@@ -1,0 +1,71 @@
+# Stack Tributo — corre en la VM Oracle existente (red/volúmenes propios, aislado de la liga).
+# Mongo NO está aquí: se usa Atlas M0 (MONGODB_URI). Inbound solo por el túnel, solo la web.
+#   docker compose up -d --build
+services:
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      PORT: '3001'
+    restart: unless-stopped
+    expose:
+      - '3001' # interno; lo consume web por la red de compose
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:3001/api/v1/health']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    logging:
+      driver: json-file
+      options: { max-size: '10m', max-file: '3' }
+
+  worker:
+    build:
+      context: .
+      dockerfile: apps/worker/Dockerfile
+    env_file: .env
+    environment:
+      NODE_ENV: production
+    restart: unless-stopped
+    depends_on:
+      - api
+    stop_grace_period: 30s
+    logging:
+      driver: json-file
+      options: { max-size: '10m', max-file: '3' }
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    environment:
+      NODE_ENV: production
+      API_URL: http://api:3001
+      API_KEY: ${API_KEY}
+      HOSTNAME: 0.0.0.0 # Next standalone se bindea al HOSTNAME que Docker inyecta si no
+    restart: unless-stopped
+    depends_on:
+      - api
+    expose:
+      - '3000' # lo publica el túnel
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:3000']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    logging:
+      driver: json-file
+      options: { max-size: '10m', max-file: '3' }
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      - web
+    logging:
+      driver: json-file
+      options: { max-size: '10m', max-file: '3' }
