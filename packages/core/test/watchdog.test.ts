@@ -3,10 +3,11 @@ import { hasOfficialCronograma } from '../src/cronograma';
 import { diffFeriados, feriadosDelAnio } from '../src/feriados';
 
 describe('watchdog de data estática', () => {
-  it('hasOfficialCronograma: 2026 cargado para dígito 0; 2027 no; otro dígito no', () => {
+  it('hasOfficialCronograma: 2026 cargado para todos los dígitos; 2027 no', () => {
     expect(hasOfficialCronograma(2026, 0)).toBe(true);
+    expect(hasOfficialCronograma(2026, 5)).toBe(true);
+    expect(hasOfficialCronograma(2026, 9)).toBe(true);
     expect(hasOfficialCronograma(2027, 0)).toBe(false);
-    expect(hasOfficialCronograma(2026, 5)).toBe(false);
   });
 
   it('feriadosDelAnio filtra por año', () => {

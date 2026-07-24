@@ -1,5 +1,12 @@
 import { createHash } from 'node:crypto';
-import { diffFeriados, hasOfficialCronograma, todayLimaIso } from '@tributo/core';
+import {
+  compareCronograma,
+  diffFeriados,
+  hasOfficialCronograma,
+  parseCronogramaSunat,
+  todayLimaIso,
+  urlCronogramaSunat,
+} from '@tributo/core';
 import { SettingsModel } from '../db';
 import { sendOnce } from '../notify';
 import { logger } from '../logger';
@@ -58,6 +65,51 @@ async function checkFeriados(year: number): Promise<void> {
   );
 }
 
+/**
+ * Verifica la tabla local contra la página oficial de SUNAT (HTML estático parseable).
+ * Devuelve 'OK' | 'PARSE_FAIL' (página inexistente o formato cambiado).
+ */
+async function checkCronogramaContraSunat(year: number): Promise<'OK' | 'PARSE_FAIL'> {
+  const url = urlCronogramaSunat(year);
+  let texto = '';
+  try {
+    const res = await fetch(url, { headers: { 'user-agent': 'Mozilla/5.0' } });
+    if (!res.ok) return 'PARSE_FAIL';
+    texto = (await res.text())
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/&nbsp;?/g, ' ')
+      .replace(/\s+/g, ' ');
+  } catch (e) {
+    logger.warn({ year, err: e }, 'watchdog cronograma: no se pudo leer la página SUNAT');
+    return 'PARSE_FAIL';
+  }
+
+  const parsed = parseCronogramaSunat(texto, year);
+  if (Object.keys(parsed).length < 12) return 'PARSE_FAIL';
+
+  const diffs = compareCronograma(parsed, year);
+  if (diffs.length === 0) {
+    logger.info({ year }, 'watchdog cronograma: tabla local coincide con SUNAT');
+    return 'OK';
+  }
+
+  const esEstimado = diffs.every((d) => d.local.includes('ESTIMATED'));
+  const detalle = diffs
+    .slice(0, 8)
+    .map((d) => `${d.period} díg.${d.digit}: app=${d.local} vs SUNAT=${d.sunat}`)
+    .join('\n');
+  const hash = createHash('sha1').update(detalle).digest('hex').slice(0, 8);
+  const msg = esEstimado
+    ? `📅 SUNAT ya publicó el cronograma ${year} y la app lo tiene ESTIMADO.\n` +
+      `Fuente: ${url}\n` +
+      `Pásale ese link (o las fechas) a Claude Code para cargar la tabla, correr los ` +
+      `tests y recalcular los periodos abiertos.`
+    : `🔴 El cronograma local NO coincide con la página de SUNAT (${year}):\n${detalle}\n` +
+      `Fuente: ${url}\nVerificar la R.S. (¿prórroga/errata?) y avisar a Claude Code.`;
+  await sendOnce(`watchdog:cronograma:${year}:${hash}`, 'SYSTEM', msg);
+  return 'OK';
+}
+
 export async function dataWatchdog(): Promise<void> {
   const today = todayLimaIso();
   const year = Number(today.slice(0, 4));
@@ -68,22 +120,26 @@ export async function dataWatchdog(): Promise<void> {
   await checkFeriados(year);
   if (month >= 11) await checkFeriados(year + 1);
 
-  // Cronograma: si falta el del año en curso es urgente; el del siguiente, desde noviembre.
-  const targets = [
-    ...(hasOfficialCronograma(year, digit) ? [] : [year]),
-    ...(month >= 11 && !hasOfficialCronograma(year + 1, digit) ? [year + 1] : []),
-  ];
-  for (const y of targets) {
-    await sendOnce(
-      `watchdog:cronograma:${y}:${today.slice(0, 7)}`,
-      'SYSTEM',
-      `📅 Falta cargar el cronograma oficial ${y} (dígito ${digit}).\n` +
-        `Mientras tanto los vencimientos van ESTIMADOS (⚠️ en cada recordatorio).\n\n` +
-        `Qué hacer (5 min):\n` +
-        `1. Abre: https://orientacion.sunat.gob.pe/cronograma-de-obligaciones-mensuales\n` +
-        `2. Copia las 12 fechas del dígito ${digit} del año ${y} (o el link de la R.S.)\n` +
-        `3. Pégaselas a Claude Code en el repo — él actualiza cronograma.ts, corre los ` +
-        `tests que validan la tabla, despliega y recalcula los periodos abiertos.`,
-    );
+  // Cronograma: verificar contra la página oficial (año actual siempre; el siguiente
+  // desde octubre, para detectar la publicación de la R.S. apenas salga).
+  const aVerificar = [year, ...(month >= 10 ? [year + 1] : [])];
+  for (const y of aVerificar) {
+    const resultado = await checkCronogramaContraSunat(y);
+    // Fallback: si la página no existe/cambió Y nuestra tabla falta, recordar a mano.
+    if (resultado === 'PARSE_FAIL' && !hasOfficialCronograma(y, digit) && (y === year || month >= 11)) {
+      await sendOnce(
+        `watchdog:cronograma:${y}:${today.slice(0, 7)}`,
+        'SYSTEM',
+        `📅 Falta cargar el cronograma oficial ${y} (dígito ${digit}) y no pude leer la ` +
+          `página de SUNAT para verificarlo.\n` +
+          `Mientras tanto los vencimientos van ESTIMADOS (⚠️ en cada recordatorio).\n\n` +
+          `Qué hacer (5 min):\n` +
+          `1. Abre: ${urlCronogramaSunat(y)}\n` +
+          `   (índice: https://orientacion.sunat.gob.pe/13-cronogramas)\n` +
+          `2. Copia las 12 fechas del dígito ${digit} (o el link de la R.S.)\n` +
+          `3. Pégaselas a Claude Code — actualiza la tabla, corre los tests, despliega ` +
+          `y recalcula los periodos abiertos.`,
+      );
+    }
   }
 }

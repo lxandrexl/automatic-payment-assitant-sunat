@@ -29,8 +29,10 @@ describe('cronograma F.621', () => {
     expect(getDueDate('2027-04', 0)).toEqual({ date: '2027-05-17', source: 'ESTIMATED' });
   });
 
-  it('estima para dígitos sin data oficial cargada', () => {
-    expect(getDueDate('2026-07', 5).source).toBe('ESTIMATED');
+  it('tabla completa: otros dígitos también OFFICIAL (transcrita de la página SUNAT)', () => {
+    expect(getDueDate('2026-07', 5)).toEqual({ date: '2026-08-21', source: 'OFFICIAL' });
+    expect(getDueDate('2026-07', 9)).toEqual({ date: '2026-08-25', source: 'OFFICIAL' });
+    expect(getDueDate('2026-12', 3)).toEqual({ date: '2027-01-20', source: 'OFFICIAL' });
   });
 
   it('rechaza periodos malformados', () => {

@@ -3,6 +3,7 @@ export * from './feriados';
 export * from './habiles';
 export * from './fechas';
 export * from './cronograma';
+export * from './cronograma-sunat';
 export * from './calculos';
 export * from './summary';
 export * from './proyeccion';
