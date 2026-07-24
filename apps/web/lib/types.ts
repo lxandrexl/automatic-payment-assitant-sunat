@@ -11,6 +11,8 @@ export interface PeriodSummary {
   totalMesCents: number;
   detrDisponibleEstimadaCents: number;
   npsEstimadoCents: number;
+  rxhBrutoCents: number;
+  pago616Cents: number;
 }
 
 export interface Period {
@@ -74,6 +76,7 @@ export interface Client {
   ruc: string;
   kind: 'FACTURA' | 'RXH';
   defaultBaseCents: number;
+  domiciliado: boolean;
 }
 
 export interface Settings {
@@ -87,6 +90,7 @@ export interface Settings {
   pagoCuentaRate: number;
   retencion4taRate: number;
   otrosGastosCents: number;
+  gastos3UitCents: number;
   bnDetraccionAccount: string | null;
   clients: Client[];
   notify: {
@@ -112,6 +116,14 @@ export interface Alert {
   payloadPreview: string;
 }
 
+export interface Renta4taProjection {
+  deduccion20Cents: number;
+  rentaNeta4taCents: number;
+  rentaNetaTrabajoCents: number;
+  irAnualCents: number;
+  saldoCents: number;
+}
+
 export interface Dashboard {
   today: string;
   nextDue: { period: string; dueDate: string; source: string; status: string } | null;
@@ -124,5 +136,6 @@ export interface Dashboard {
     status: string;
   }[];
   projection: AnnualProjection;
+  projection4ta: Renta4taProjection;
   recentAlerts: Alert[];
 }

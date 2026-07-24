@@ -30,8 +30,11 @@ export default async function Home() {
       {d.currentPeriod && (
         <Card title={`Mes en curso (${d.currentPeriod.period})`}>
           <Row label="IGV a pagar" value={formatPen(d.currentPeriod.summary.igvPagarCents)} />
-          <Row label="Pago a cuenta" value={formatPen(d.currentPeriod.summary.pagoCuentaCents)} />
+          <Row label="Pago a cuenta 3ra" value={formatPen(d.currentPeriod.summary.pagoCuentaCents)} />
           <Row label="NPS estimado" value={formatPen(d.currentPeriod.summary.npsEstimadoCents)} strong />
+          {d.currentPeriod.summary.pago616Cents > 0 && (
+            <Row label="F.616 (4ta)" value={formatPen(d.currentPeriod.summary.pago616Cents)} strong />
+          )}
         </Card>
       )}
 
@@ -55,7 +58,7 @@ export default async function Home() {
         )}
       </Card>
 
-      <Card title="Proyección anual">
+      <Card title="Proyección anual — negocio (RMT)">
         <Row label="Renta neta" value={formatPen(d.projection.rentaNetaCents)} />
         <Row label="IR estimado" value={formatPen(d.projection.irEstimadoCents)} />
         <Row label="Regularización estimada" value={formatPen(d.projection.regularizacionEstimadaCents)} />
@@ -65,6 +68,16 @@ export default async function Home() {
             en el tramo 10%.
           </p>
         )}
+      </Card>
+
+      <Card title="Proyección anual — RxH (4ta)">
+        <Row label="Renta neta de trabajo" value={formatPen(d.projection4ta.rentaNetaTrabajoCents)} />
+        <Row label="IR anual estimado" value={formatPen(d.projection4ta.irAnualCents)} />
+        <Row
+          label={d.projection4ta.saldoCents >= 0 ? 'Saldo por pagar' : 'Saldo a favor'}
+          value={formatPen(Math.abs(d.projection4ta.saldoCents))}
+          strong
+        />
       </Card>
 
       <Card title="Últimas alertas">

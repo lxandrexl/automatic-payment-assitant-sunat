@@ -31,6 +31,21 @@ describe('plantillas', () => {
     expect(msg).not.toContain('fecha estimada');
   });
 
+  it('con pago616 anuncia F.621 + F.616 y muestra el monto', () => {
+    const msg = dueReminderMsg({
+      period: '2026-08',
+      dueDateIso: '2026-09-15',
+      daysBefore: 1,
+      estimated: false,
+      igvPagarCents: 135000,
+      pagoCuentaCents: 9000,
+      npsEstimadoCents: 16600,
+      pago616Cents: 72000,
+    });
+    expect(msg).toContain('F.621 + F.616');
+    expect(msg).toContain('F.616 (4ta, RxH sin retención): S/ 720.00');
+  });
+
   it('detracción vencida formatea monto y fecha', () => {
     const msg = detraccionOverdueMsg({
       period: '2026-07',

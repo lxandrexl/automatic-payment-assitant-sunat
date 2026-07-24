@@ -60,7 +60,11 @@ export class InvoicesService {
       });
     }
 
-    const r = computeRxh(dto.baseCents, s);
+    // Cliente no domiciliado (ej. Chile) → sin retención; el 8% se paga vía F.616.
+    const settingsDoc = await this.settings.get();
+    const client = settingsDoc.clients.find((c) => c._id.equals(dto.clientId));
+    const pagadorRetiene = client?.domiciliado !== false;
+    const r = computeRxh(dto.baseCents, s, pagadorRetiene);
     return this.model.create({
       ...base,
       igvCents: 0,

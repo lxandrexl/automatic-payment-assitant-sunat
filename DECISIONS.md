@@ -21,6 +21,22 @@ Los "días no laborables" declarados por decreto para el sector público NO se i
 no mueven los vencimientos SUNAT. Para 2028+ hay que añadir el año al archivo (editable,
 como pide el SPEC).
 
+## 2026-07-23 — Cliente RxH no domiciliado (Chile) y F.616
+
+El dueño emitirá el RxH a una empresa chilena. Un no domiciliado no es agente de retención
+de SUNAT, así que el supuesto del SPEC §0 ("el RxH no genera declaración mensual porque la
+retención 8% cubre el pago a cuenta") no aplica: el pago a cuenta lo hace el emisor vía
+**F.616 mensual (8% del bruto − retenido)**, mismo cronograma que el 621. Con ~S/ 108k/año
+se supera el límite de suspensión de 4ta (S/ 48,125 en 2026), no hay exención. Implementado:
+`clients[].domiciliado` (default true), `computeRxh(..., pagadorRetiene)`, `computePago616`,
+campos `rxhBrutoCents`/`pago616Cents` en el summary, línea F.616 en recordatorios y dashboard,
+y **proyección anual de 4ta** (`renta4ta.ts`: bruto − 20% tope 24 UIT − 7 UIT − gastos 3 UIT
+→ escala 8/14/17/20/30) con `gastos3UitCents` editable en settings. Modelo validado contra el
+plan financiero del dueño (Plan_Financiero_Impuestos_Peru_2026.xlsx, hoja RXH_4TA).
+Fuera de alcance (consciente): la ruta alternativa de facturar al exterior como
+**exportación de servicios** (3ra, sin IGV/detracción, requiere Registro de Exportadores) —
+el SPEC la excluye de v1; decisión con contador si algún día conviene.
+
 ## 2026-07-23 — Fechas del core como strings ISO `YYYY-MM-DD`
 
 Toda la matemática de fechas de `packages/core` opera sobre strings ISO en hora de Lima

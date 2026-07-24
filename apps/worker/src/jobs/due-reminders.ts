@@ -29,6 +29,7 @@ export async function dueReminders(): Promise<void> {
         igvPagarCents: summary.igvPagarCents,
         pagoCuentaCents: summary.pagoCuentaCents,
         npsEstimadoCents: summary.npsEstimadoCents,
+        pago616Cents: summary.pago616Cents,
       });
       const sent = await sendOnce(`due:${periodId}:T-${n}`, 'DUE_REMINDER', msg);
       if (sent) logger.info({ period: periodId, n }, 'recordatorio de vencimiento enviado');

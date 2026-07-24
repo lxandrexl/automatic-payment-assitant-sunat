@@ -123,6 +123,7 @@ function toInvoiceForSummary(i: InvoiceDocument): InvoiceForSummary {
     detraccion: i.detraccion
       ? { status: i.detraccion.status, amountCents: i.detraccion.amountCents }
       : null,
+    retencionCents: i.retencion?.amountCents ?? 0,
   };
 }
 

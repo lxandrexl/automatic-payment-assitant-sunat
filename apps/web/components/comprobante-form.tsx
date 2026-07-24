@@ -28,6 +28,8 @@ export function ComprobanteForm(props: Props) {
   const [err, setErr] = useState<string | null>(null);
 
   const baseCents = toCents(Number(baseSoles) || 0);
+  const selectedClient = props.clients.find((c) => c._id === clientId);
+  const pagadorRetiene = selectedClient?.domiciliado !== false;
   const calc = useMemo(() => {
     const s = {
       igvRate: props.igvRate,
@@ -38,8 +40,8 @@ export function ComprobanteForm(props: Props) {
     };
     return kind === 'FACTURA'
       ? { kind: 'FACTURA' as const, factura: computeFactura(baseCents, s) }
-      : { kind: 'RXH' as const, rxh: computeRxh(baseCents, s) };
-  }, [kind, baseCents, props]);
+      : { kind: 'RXH' as const, rxh: computeRxh(baseCents, s, pagadorRetiene) };
+  }, [kind, baseCents, props, pagadorRetiene]);
 
   async function submit() {
     setBusy(true);
@@ -99,8 +101,18 @@ export function ComprobanteForm(props: Props) {
         ) : (
           <>
             <Row label="Bruto" value={formatPen(baseCents)} />
-            <Row label="Retención (8%)" value={formatPen(calc.rxh.retencionCents)} />
+            <Row
+              label={pagadorRetiene ? 'Retención (8%)' : 'Retención (no domiciliado)'}
+              value={formatPen(calc.rxh.retencionCents)}
+            />
             <Row label="Neto a cobrar" value={formatPen(calc.rxh.netCents)} strong />
+            {!pagadorRetiene && (
+              <p className="mt-2 rounded bg-sky-500/10 p-2 text-xs text-sky-300">
+                Cliente no domiciliado: no te retiene. El 8% (
+                {formatPen(Math.round(baseCents * props.retencion4taRate))}) lo declaras tú en el
+                F.616 del mes — el recordatorio lo incluirá.
+              </p>
+            )}
           </>
         )}
       </div>

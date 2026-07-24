@@ -30,6 +30,9 @@ export default async function PeriodoDetalle({ params }: { params: { id: string 
         <Row label="Pago a cuenta" value={formatPen(p.summary.pagoCuentaCents)} />
         <Row label="Total del mes" value={formatPen(p.summary.totalMesCents)} strong />
         <Row label="NPS estimado" value={formatPen(p.summary.npsEstimadoCents)} strong />
+        {p.summary.pago616Cents > 0 && (
+          <Row label="F.616 (4ta, RxH sin retención)" value={formatPen(p.summary.pago616Cents)} strong />
+        )}
       </Card>
 
       <Card title="Comprobantes">

@@ -63,6 +63,7 @@ const invoiceSchema = new Schema(
       depositedAt: Date,
       status: String,
     },
+    retencion: { amountCents: Number },
   },
   { strict: false, collection: 'invoices' },
 );
@@ -133,6 +134,7 @@ export async function summaryOf(period: string, calc: CalcSettings): Promise<Per
               amountCents: i.detraccion.amountCents ?? 0,
             }
           : null,
+        retencionCents: i.retencion?.amountCents ?? 0,
       })),
       purchases: purchases.map((p2) => ({
         baseCents: p2.baseCents ?? 0,

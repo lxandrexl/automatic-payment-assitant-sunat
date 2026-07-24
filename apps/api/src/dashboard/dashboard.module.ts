@@ -1,7 +1,13 @@
 import { Controller, Get, Injectable, Module } from '@nestjs/common';
 import { InjectModel, MongooseModule } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { computeAnnualProjection, dateToLimaIso, todayLimaIso } from '@tributo/core';
+import {
+  computeAnnualProjection,
+  computeAnnualRenta4ta,
+  computePago616,
+  dateToLimaIso,
+  todayLimaIso,
+} from '@tributo/core';
 import { Alert, AlertDocument, AlertSchema } from '../schemas/alert.schema';
 import { Invoice, InvoiceDocument, InvoiceSchema } from '../schemas/invoice.schema';
 import { Period, PeriodDocument, PeriodSchema } from '../schemas/period.schema';
@@ -40,6 +46,7 @@ class DashboardService {
     });
 
     const projection = await this.annualProjection(year);
+    const projection4ta = await this.annualProjection4ta(year);
     const recentAlerts = await this.alerts.find().sort({ sentAt: -1 }).limit(10);
 
     return {
@@ -61,8 +68,42 @@ class DashboardService {
         status: i.detraccion?.status,
       })),
       projection,
+      projection4ta,
       recentAlerts,
     };
+  }
+
+  /** Liquidación anual estimada de 4ta (RxH): modelo del plan financiero del dueño. */
+  private async annualProjection4ta(year: number) {
+    const s = await this.settings.get();
+    const from = new Date(Date.UTC(year, 0, 1, 5));
+    const to = new Date(Date.UTC(year + 1, 0, 1, 5));
+    const rxhs = await this.invoices.find({
+      issueDate: { $gte: from, $lt: to },
+      kind: 'RXH',
+      status: { $ne: 'VOIDED' },
+    });
+    const brutoAnualCents = rxhs.reduce((a, i) => a + i.baseCents, 0);
+    const retencionesCents = rxhs.reduce((a, i) => a + (i.retencion?.amountCents ?? 0), 0);
+    // Pagos F.616 estimados: por mes, 8% del bruto menos lo retenido ese mes.
+    const porMes = new Map<string, { bruto: number; ret: number }>();
+    for (const i of rxhs) {
+      const m = porMes.get(i.period) ?? { bruto: 0, ret: 0 };
+      m.bruto += i.baseCents;
+      m.ret += i.retencion?.amountCents ?? 0;
+      porMes.set(i.period, m);
+    }
+    let pagosCuentaCents = 0;
+    for (const m of porMes.values()) {
+      pagosCuentaCents += computePago616(m.bruto, m.ret, s.retencion4taRate);
+    }
+    return computeAnnualRenta4ta({
+      brutoAnualCents,
+      retencionesCents,
+      pagosCuentaCents,
+      gastos3UitCents: s.gastos3UitCents ?? 0,
+      uitCents: s.uitCents,
+    });
   }
 
   private async annualProjection(year: number) {

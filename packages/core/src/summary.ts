@@ -1,6 +1,6 @@
 // Liquidación del periodo para el dashboard (SPEC §4.4).
 
-import type { CalcSettings } from './calculos';
+import { computePago616, type CalcSettings } from './calculos';
 
 export interface InvoiceForSummary {
   kind: 'FACTURA' | 'RXH';
@@ -8,6 +8,7 @@ export interface InvoiceForSummary {
   baseCents: number;
   igvCents: number;
   detraccion?: { status: 'PENDING' | 'DEPOSITED' | 'OVERDUE'; amountCents: number } | null;
+  retencionCents?: number; // solo RXH
 }
 
 export interface PurchaseForSummary {
@@ -27,6 +28,10 @@ export interface PeriodSummary {
   totalMesCents: number;
   detrDisponibleEstimadaCents: number;
   npsEstimadoCents: number;
+  /** RxH del mes (4ta categoría, no entra al F.621). */
+  rxhBrutoCents: number;
+  /** Pago a cuenta de 4ta del mes (F.616): 8% del bruto − retenido. */
+  pago616Cents: number;
 }
 
 export function computePeriodSummary(
@@ -50,6 +55,9 @@ export function computePeriodSummary(
     (a, i) => a + (i.detraccion?.status === 'DEPOSITED' ? i.detraccion.amountCents : 0),
     0,
   );
+  const rxhs = invoices.filter((i) => i.kind === 'RXH' && i.status !== 'VOIDED');
+  const rxhBrutoCents = rxhs.reduce((a, i) => a + i.baseCents, 0);
+  const rxhRetenidoCents = rxhs.reduce((a, i) => a + (i.retencionCents ?? 0), 0);
   return {
     ventasBaseCents,
     igvVentasCents,
@@ -61,6 +69,8 @@ export function computePeriodSummary(
     totalMesCents,
     detrDisponibleEstimadaCents,
     npsEstimadoCents: Math.max(0, totalMesCents - detrDisponibleEstimadaCents),
+    rxhBrutoCents,
+    pago616Cents: computePago616(rxhBrutoCents, rxhRetenidoCents, s.retencion4taRate),
   };
 }
 

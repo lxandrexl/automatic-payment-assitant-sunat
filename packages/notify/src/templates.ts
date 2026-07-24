@@ -13,16 +13,22 @@ export interface DueReminderData {
   igvPagarCents: number;
   pagoCuentaCents: number;
   npsEstimadoCents: number;
+  /** Pago a cuenta de 4ta del mes (F.616, mismo vencimiento). 0 = no aplica. */
+  pago616Cents?: number;
 }
 
 export function dueReminderMsg(d: DueReminderData): string {
   const cuando = d.daysBefore === 0 ? '🔴 VENCE HOY' : `⏰ Faltan ${d.daysBefore} día(s)`;
-  const base =
-    `${cuando} — Declaración F.621 periodo ${d.period}\n` +
+  const declaraciones = d.pago616Cents ? 'F.621 + F.616' : 'F.621';
+  let base =
+    `${cuando} — Declaración ${declaraciones} periodo ${d.period}\n` +
     `Vencimiento: ${formatFechaLima(d.dueDateIso)}\n` +
     `IGV a pagar: ${formatPen(d.igvPagarCents)}\n` +
-    `Pago a cuenta: ${formatPen(d.pagoCuentaCents)}\n` +
+    `Pago a cuenta 3ra: ${formatPen(d.pagoCuentaCents)}\n` +
     `NPS estimado: ${formatPen(d.npsEstimadoCents)}`;
+  if (d.pago616Cents) {
+    base += `\nF.616 (4ta, RxH sin retención): ${formatPen(d.pago616Cents)}`;
+  }
   return d.estimated ? base + ESTIMATED_SUFFIX : base;
 }
 

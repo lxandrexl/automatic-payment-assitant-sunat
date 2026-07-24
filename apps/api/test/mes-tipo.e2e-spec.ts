@@ -47,14 +47,22 @@ describe('Flujo del mes tipo (SPEC §9.2)', () => {
     await api().patch('/api/v1/settings').send({ uitCents: 550000 }).expect(401);
   });
 
-  it('crea el cliente FACTURA en settings', async () => {
+  let clienteChilenoId: string;
+
+  it('crea los clientes en settings (uno domiciliado, uno chileno)', async () => {
     const res = await auth(
       api()
         .patch('/api/v1/settings')
-        .send({ clients: [{ name: 'Cliente Empresa', ruc: '20123456789', kind: 'FACTURA', defaultBaseCents: 900000 }] }),
+        .send({
+          clients: [
+            { name: 'Cliente Empresa', ruc: '20123456789', kind: 'FACTURA', defaultBaseCents: 900000 },
+            { name: 'Cliente Chile', ruc: '76543210-5', kind: 'RXH', defaultBaseCents: 900000, domiciliado: false },
+          ],
+        }),
     ).expect(200);
     clientId = res.body.clients[0]._id;
-    expect(clientId).toBeDefined();
+    clienteChilenoId = res.body.clients[1]._id;
+    expect(res.body.clients[1].domiciliado).toBe(false);
   });
 
   it('crea la factura tipo: server computa IGV, total y detracción; crea el periodo on-the-fly', async () => {
@@ -118,6 +126,21 @@ describe('Flujo del mes tipo (SPEC §9.2)', () => {
     expect(res.body.retencion.amountCents).toBe(72000);
   });
 
+  it('RxH a cliente chileno: SIN retención (no domiciliado)', async () => {
+    const res = await auth(
+      api().post('/api/v1/invoices').send({
+        kind: 'RXH',
+        clientId: clienteChilenoId,
+        series: 'E001',
+        number: 'R2',
+        issueDate: '2026-07-16',
+        baseCents: 900000,
+      }),
+    ).expect(201);
+    expect(res.body.retencion.amountCents).toBe(0);
+    expect(res.body.totalCents).toBe(900000);
+  });
+
   it('crea 3 compras; una sin bancarizar > S/2000 trae warning', async () => {
     await auth(
       api().post('/api/v1/purchases').send({
@@ -178,6 +201,9 @@ describe('Flujo del mes tipo (SPEC §9.2)', () => {
     expect(s.pagoCuentaCents).toBe(9000);
     // detracción ya DEPOSITED → disponible reduce el NPS
     expect(s.detrDisponibleEstimadaCents).toBe(127400);
+    // 2 RxH de 9,000: uno retenido (720), el chileno no → F.616 = 1,440 − 720 = 720
+    expect(s.rxhBrutoCents).toBe(1800000);
+    expect(s.pago616Cents).toBe(72000);
   });
 
   it('declara el periodo con pago → status PAID', async () => {

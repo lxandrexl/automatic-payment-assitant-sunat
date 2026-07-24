@@ -45,10 +45,29 @@ export interface RxhCalc {
   netCents: number;
 }
 
-export function computeRxh(brutoCents: number, s: CalcSettings): RxhCalc {
+/**
+ * `pagadorRetiene`: false cuando el cliente es NO domiciliado (ej. empresa chilena) —
+ * un no domiciliado no es agente de retención de SUNAT, cobra el bruto completo y el
+ * pago a cuenta lo hace el emisor vía F.616 (ver computePago616).
+ */
+export function computeRxh(brutoCents: number, s: CalcSettings, pagadorRetiene = true): RxhCalc {
   const retencionCents =
-    brutoCents > RXH_RETENCION_THRESHOLD_CENTS ? Math.round(brutoCents * s.retencion4taRate) : 0;
+    pagadorRetiene && brutoCents > RXH_RETENCION_THRESHOLD_CENTS
+      ? Math.round(brutoCents * s.retencion4taRate)
+      : 0;
   return { retencionCents, netCents: brutoCents - retencionCents };
+}
+
+/**
+ * Pago a cuenta mensual de 4ta (F.616): 8% del bruto del mes menos lo ya retenido.
+ * Vence con el mismo cronograma que el F.621.
+ */
+export function computePago616(
+  brutoMesCents: number,
+  retenidoMesCents: number,
+  retencion4taRate: number,
+): number {
+  return Math.max(0, Math.round(brutoMesCents * retencion4taRate) - retenidoMesCents);
 }
 
 /**

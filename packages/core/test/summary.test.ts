@@ -45,6 +45,23 @@ describe('computePeriodSummary', () => {
     expect(s.npsEstimadoCents).toBe(144000);
   });
 
+  it('RxH sin retención genera pago F.616; con retención no', () => {
+    const sinRet = computePeriodSummary(
+      [{ kind: 'RXH', status: 'ISSUED', baseCents: 900000, igvCents: 0, retencionCents: 0 }],
+      [],
+      S,
+    );
+    expect(sinRet.rxhBrutoCents).toBe(900000);
+    expect(sinRet.pago616Cents).toBe(72000);
+
+    const conRet = computePeriodSummary(
+      [{ kind: 'RXH', status: 'ISSUED', baseCents: 900000, igvCents: 0, retencionCents: 72000 }],
+      [],
+      S,
+    );
+    expect(conRet.pago616Cents).toBe(0);
+  });
+
   it('excluye VOIDED y RXH de ventas; compras sin crédito no suman IGV', () => {
     const s = computePeriodSummary(
       [
