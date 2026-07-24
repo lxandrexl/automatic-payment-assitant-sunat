@@ -36,6 +36,7 @@ class DashboardService {
     const nextDue = await this.periods
       .findOne({ status: 'OPEN', dueDate: { $gte: new Date() } })
       .sort({ dueDate: 1 });
+    const nextDueSummary = nextDue ? await this.periodsService.summaryOf(nextDue._id) : null;
 
     const currentPeriodId = today.slice(0, 7);
     const currentSummary = (await this.periods.findById(currentPeriodId))
@@ -60,6 +61,7 @@ class DashboardService {
             dueDate: dateToLimaIso(nextDue.dueDate),
             source: nextDue.dueDateSource,
             status: nextDue.status,
+            summary: nextDueSummary,
           }
         : null,
       currentPeriod: currentSummary ? { period: currentPeriodId, summary: currentSummary } : null,

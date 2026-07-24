@@ -6,7 +6,7 @@ import { computeFactura, computeRxh, toCents } from '@tributo/core';
 import { formatPen } from '@/lib/format';
 import { mutate } from '@/lib/mutate';
 import type { Client } from '@/lib/types';
-import { Card, Row } from '@/components/ui';
+import { Card, Field, inputCls, Row } from '@/components/ui';
 
 interface Props {
   clients: Client[];
@@ -57,37 +57,40 @@ export function ComprobanteForm(props: Props) {
     }
   }
 
-  const inputCls =
-    'w-full rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm outline-none focus:border-emerald-500';
-
   return (
     <Card title="Nuevo comprobante">
-      <div className="grid grid-cols-2 gap-2">
-        <select value={kind} onChange={(e) => setKind(e.target.value as 'FACTURA' | 'RXH')} className={inputCls}>
-          <option value="FACTURA">Factura</option>
-          <option value="RXH">Recibo por honorarios</option>
-        </select>
-        <select value={clientId} onChange={(e) => setClientId(e.target.value)} className={inputCls}>
-          <option value="">— Cliente —</option>
-          {props.clients.map((c) => (
-            <option key={c._id} value={c._id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
-        <input value={series} onChange={(e) => setSeries(e.target.value)} placeholder="Serie" className={inputCls} />
-        <input value={number} onChange={(e) => setNumber(e.target.value)} placeholder="Número" className={inputCls} />
-        <input type="date" value={issueDate} onChange={(e) => setIssueDate(e.target.value)} className={inputCls} />
-        <input
-          type="number"
-          value={baseSoles}
-          onChange={(e) => setBaseSoles(e.target.value)}
-          placeholder="Base (S/)"
-          className={inputCls}
-        />
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Tipo">
+          <select value={kind} onChange={(e) => setKind(e.target.value as 'FACTURA' | 'RXH')} className={inputCls}>
+            <option value="FACTURA">Factura</option>
+            <option value="RXH">Recibo por honorarios</option>
+          </select>
+        </Field>
+        <Field label="Cliente">
+          <select value={clientId} onChange={(e) => setClientId(e.target.value)} className={inputCls}>
+            <option value="">— Elige —</option>
+            {props.clients.map((c) => (
+              <option key={c._id} value={c._id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Serie">
+          <input value={series} onChange={(e) => setSeries(e.target.value)} placeholder="E001" className={inputCls} />
+        </Field>
+        <Field label="Número">
+          <input value={number} onChange={(e) => setNumber(e.target.value)} placeholder="123" className={inputCls} />
+        </Field>
+        <Field label="Fecha de emisión">
+          <input type="date" value={issueDate} onChange={(e) => setIssueDate(e.target.value)} className={inputCls} />
+        </Field>
+        <Field label={kind === 'FACTURA' ? 'Base imponible (S/)' : 'Monto bruto (S/)'}>
+          <input type="number" value={baseSoles} onChange={(e) => setBaseSoles(e.target.value)} placeholder="9000" className={inputCls} />
+        </Field>
       </div>
 
-      <div className="mt-3 rounded-lg bg-neutral-950 p-3">
+      <div className="mt-4 rounded-xl border border-neutral-800 bg-neutral-950 p-3">
         {calc.kind === 'FACTURA' ? (
           <>
             <Row label="Base" value={formatPen(baseCents)} />

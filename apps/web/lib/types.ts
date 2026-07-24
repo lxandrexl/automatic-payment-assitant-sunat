@@ -126,7 +126,13 @@ export interface Renta4taProjection {
 
 export interface Dashboard {
   today: string;
-  nextDue: { period: string; dueDate: string; source: string; status: string } | null;
+  nextDue: {
+    period: string;
+    dueDate: string;
+    source: string;
+    status: string;
+    summary: PeriodSummary | null;
+  } | null;
   currentPeriod: { period: string; summary: PeriodSummary } | null;
   detracciones: {
     id: string;

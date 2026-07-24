@@ -4,17 +4,17 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { toCents } from '@tributo/core';
 import { mutate } from '@/lib/mutate';
-import { Card } from '@/components/ui';
+import { Card, Field, inputCls } from '@/components/ui';
 
-const CATEGORIES = [
-  'EQUIPO',
-  'SOFTWARE_CLOUD',
-  'INTERNET',
-  'CELULAR',
-  'CONTADOR',
-  'OFICINA',
-  'OTROS',
-];
+const CATEGORIES: Record<string, string> = {
+  EQUIPO: 'Equipo',
+  SOFTWARE_CLOUD: 'Software / Cloud',
+  INTERNET: 'Internet',
+  CELULAR: 'Celular',
+  CONTADOR: 'Contador',
+  OFICINA: 'Oficina',
+  OTROS: 'Otros',
+};
 
 export function CompraForm() {
   const router = useRouter();
@@ -32,8 +32,6 @@ export function CompraForm() {
   const [err, setErr] = useState<string | null>(null);
 
   const set = (k: string, v: string | boolean) => setForm((f) => ({ ...f, [k]: v }));
-  const inputCls =
-    'w-full rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm outline-none focus:border-emerald-500';
 
   async function submit() {
     setBusy(true);
@@ -60,23 +58,37 @@ export function CompraForm() {
 
   return (
     <Card title="Nueva compra">
-      <div className="grid grid-cols-2 gap-2">
-        <input type="date" value={form.issueDate} onChange={(e) => set('issueDate', e.target.value)} className={inputCls} />
-        <select value={form.category} onChange={(e) => set('category', e.target.value)} className={inputCls}>
-          {CATEGORIES.map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
-          ))}
-        </select>
-        <input value={form.supplierName} onChange={(e) => set('supplierName', e.target.value)} placeholder="Proveedor" className={inputCls} />
-        <input value={form.supplierRuc} onChange={(e) => set('supplierRuc', e.target.value)} placeholder="RUC (11 díg.)" className={inputCls} />
-        <input value={form.series} onChange={(e) => set('series', e.target.value)} placeholder="Serie" className={inputCls} />
-        <input value={form.number} onChange={(e) => set('number', e.target.value)} placeholder="Número" className={inputCls} />
-        <input type="number" value={form.baseSoles} onChange={(e) => set('baseSoles', e.target.value)} placeholder="Base (S/)" className={inputCls} />
-        <label className="flex items-center gap-2 px-1 text-sm text-neutral-300">
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Fecha de emisión">
+          <input type="date" value={form.issueDate} onChange={(e) => set('issueDate', e.target.value)} className={inputCls} />
+        </Field>
+        <Field label="Categoría">
+          <select value={form.category} onChange={(e) => set('category', e.target.value)} className={inputCls}>
+            {Object.entries(CATEGORIES).map(([k, v]) => (
+              <option key={k} value={k}>
+                {v}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Proveedor" full>
+          <input value={form.supplierName} onChange={(e) => set('supplierName', e.target.value)} placeholder="Razón social" className={inputCls} />
+        </Field>
+        <Field label="RUC del proveedor">
+          <input value={form.supplierRuc} onChange={(e) => set('supplierRuc', e.target.value)} placeholder="20xxxxxxxxx" className={inputCls} />
+        </Field>
+        <Field label="Base imponible (S/)">
+          <input type="number" value={form.baseSoles} onChange={(e) => set('baseSoles', e.target.value)} placeholder="0.00" className={inputCls} />
+        </Field>
+        <Field label="Serie">
+          <input value={form.series} onChange={(e) => set('series', e.target.value)} placeholder="F001" className={inputCls} />
+        </Field>
+        <Field label="Número">
+          <input value={form.number} onChange={(e) => set('number', e.target.value)} placeholder="123" className={inputCls} />
+        </Field>
+        <label className="col-span-2 flex items-center gap-2 rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-300">
           <input type="checkbox" checked={form.bancarizado} onChange={(e) => set('bancarizado', e.target.checked)} />
-          Bancarizado
+          Pagado por medio bancario (obligatorio si supera S/ 2,000)
         </label>
       </div>
       {err && <p className="mt-2 text-sm text-red-400">{err}</p>}
