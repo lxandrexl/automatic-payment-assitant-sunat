@@ -3,10 +3,13 @@ import {
   COLUMNA_POR_DIGITO,
   compareCronograma,
   diffFeriados,
+  getRentaAnualDueDate,
   hasOfficialCronograma,
   parseCronogramaSunat,
+  parseRentaAnualTables,
   todayLimaIso,
   urlCronogramaSunat,
+  urlRentaAnual,
 } from '@tributo/core';
 import { SettingsModel } from '../db';
 import { sendOnce } from '../notify';
@@ -66,10 +69,21 @@ async function checkFeriados(year: number): Promise<void> {
   );
 }
 
-/**
- * Verifica la tabla local contra la página oficial de SUNAT (HTML estático parseable).
- * Devuelve 'OK' | 'PARSE_FAIL' (página inexistente o formato cambiado).
- */
+/** Descarga una página de SUNAT y la deja como texto plano (o null si falla). */
+async function fetchTextoPlano(url: string): Promise<string | null> {
+  try {
+    const res = await fetch(url, { headers: { 'user-agent': 'Mozilla/5.0' } });
+    if (!res.ok) return null;
+    return (await res.text())
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/&nbsp;?/g, ' ')
+      .replace(/\s+/g, ' ');
+  } catch (e) {
+    logger.warn({ url, err: e }, 'watchdog: no se pudo leer la página SUNAT');
+    return null;
+  }
+}
+
 /** Las 12 fechas del dígito dado, listas para pegar en cronograma.ts. */
 function fechasParaDigito(parsed: Record<string, string[]>, digit: number): string {
   const col = COLUMNA_POR_DIGITO[digit] ?? 0;
@@ -79,20 +93,39 @@ function fechasParaDigito(parsed: Record<string, string[]>, digit: number): stri
     .join('\n');
 }
 
+/**
+ * Verifica la DJ Anual de un ejercicio contra su página oficial. Si SUNAT ya la
+ * publicó y la app la tiene ESTIMADA, alerta con AMBAS tablas parseadas (la General
+ * y la MYPE) para que el humano cargue la correcta (la MYPE = fechas más tardías).
+ */
+async function checkRentaAnual(ejercicio: number, digit: number): Promise<void> {
+  if (getRentaAnualDueDate(ejercicio, digit).source === 'OFFICIAL') return;
+  const url = urlRentaAnual(ejercicio);
+  const texto = await fetchTextoPlano(url);
+  if (!texto) return;
+  const tables = parseRentaAnualTables(texto);
+  if (tables.length < 2) return;
+  const general = tables[0]!;
+  const mype = tables[tables.length - 1]!;
+  const fmt = (t: string[]) => t.map((d, i) => `  ${i}: ${d}`).join('\n');
+  await sendOnce(
+    `renta-anual-pub:${ejercicio}`,
+    'SYSTEM',
+    `📆 SUNAT publicó la DJ Anual del ejercicio ${ejercicio}.\n` +
+      `Tu cronograma (MYPE/PN, el de fechas más tardías):\n${fmt(mype)}\n\n` +
+      `(General, empresas >1700 UIT — NO es el tuyo):\n${fmt(general)}\n\n` +
+      `Fuente: ${url}\nPásame la tabla MYPE para cargarla verificada.`,
+  );
+}
+
+/**
+ * Verifica la tabla mensual local contra la página oficial de SUNAT.
+ * Devuelve 'OK' | 'PARSE_FAIL' (página inexistente o formato cambiado).
+ */
 async function checkCronogramaContraSunat(year: number, digit: number): Promise<'OK' | 'PARSE_FAIL'> {
   const url = urlCronogramaSunat(year);
-  let texto = '';
-  try {
-    const res = await fetch(url, { headers: { 'user-agent': 'Mozilla/5.0' } });
-    if (!res.ok) return 'PARSE_FAIL';
-    texto = (await res.text())
-      .replace(/<[^>]+>/g, ' ')
-      .replace(/&nbsp;?/g, ' ')
-      .replace(/\s+/g, ' ');
-  } catch (e) {
-    logger.warn({ year, err: e }, 'watchdog cronograma: no se pudo leer la página SUNAT');
-    return 'PARSE_FAIL';
-  }
+  const texto = await fetchTextoPlano(url);
+  if (!texto) return 'PARSE_FAIL';
 
   const parsed = parseCronogramaSunat(texto, year);
   if (Object.keys(parsed).length < 12) return 'PARSE_FAIL';
@@ -134,6 +167,9 @@ export async function dataWatchdog(): Promise<void> {
 
   // Cronograma: verificar contra la página oficial (año actual siempre; el siguiente
   // desde octubre, para detectar la publicación de la R.S. apenas salga).
+  // DJ Anual: la del ejercicio recién cerrado se publica a inicios del año siguiente.
+  await checkRentaAnual(year - 1, digit);
+
   const aVerificar = [year, ...(month >= 10 ? [year + 1] : [])];
   for (const y of aVerificar) {
     const resultado = await checkCronogramaContraSunat(y, digit);

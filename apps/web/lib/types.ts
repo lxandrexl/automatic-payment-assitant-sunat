@@ -137,5 +137,6 @@ export interface Dashboard {
   }[];
   projection: AnnualProjection;
   projection4ta: Renta4taProjection;
+  rentaAnual: { ejercicio: number; dueDate: string; source: 'OFFICIAL' | 'ESTIMATED' };
   recentAlerts: Alert[];
 }

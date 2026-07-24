@@ -9,6 +9,7 @@ import { buzonWatcher } from './jobs/buzon-watcher';
 import { monthlyDigest } from './jobs/monthly-digest';
 import { periodBootstrap } from './jobs/period-bootstrap';
 import { dataWatchdog } from './jobs/data-watchdog';
+import { rentaAnualReminder } from './jobs/renta-anual-reminder';
 
 const TZ = { timezone: 'America/Lima' } as const;
 
@@ -19,6 +20,7 @@ async function main() {
 
   // SPEC §6 — todos en hora de Lima.
   cron.schedule('0 9 * * *', () => void runJob('due-reminders', dueReminders), TZ);
+  cron.schedule('0 9 * * *', () => void runJob('renta-anual', rentaAnualReminder), TZ);
   cron.schedule('0 9 * * *', () => void runJob('detraccion-check', detraccionCheck), TZ);
   cron.schedule('*/15 * * * *', () => void runJob('buzon-watcher', buzonWatcher), TZ);
   cron.schedule('0 9 1 * *', () => void runJob('monthly-digest', monthlyDigest), TZ);

@@ -23,6 +23,7 @@ const settingsSchema = new Schema(
     pagoCuentaRate: Number,
     retencion4taRate: Number,
     otrosGastosCents: Number,
+    gastos3UitCents: Number,
     notify: {
       telegramChatId: String,
       email: String,

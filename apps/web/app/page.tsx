@@ -80,6 +80,18 @@ export default async function Home() {
         />
       </Card>
 
+      <Card title="Declaración Jurada Anual">
+        <div className="flex items-center justify-between">
+          <span className="text-lg font-semibold">Ejercicio {d.rentaAnual.ejercicio}</span>
+          <Chip>{d.rentaAnual.source}</Chip>
+        </div>
+        <Row label="Vence" value={formatFecha(d.rentaAnual.dueDate)} />
+        <Row label="Días restantes" value={daysLeft(d.today, d.rentaAnual.dueDate)} strong />
+        <p className="mt-2 text-xs text-neutral-500">
+          Cronograma MYPE/PN. Regulariza el IR de 3ra y 4ta (montos en las cards de arriba).
+        </p>
+      </Card>
+
       <Card title="Últimas alertas">
         {d.recentAlerts.length === 0 ? (
           <p className="text-sm text-neutral-400">Sin alertas.</p>

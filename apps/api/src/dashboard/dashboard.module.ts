@@ -7,6 +7,7 @@ import {
   computePago616,
   dateToLimaIso,
   todayLimaIso,
+  upcomingRentaAnual,
 } from '@tributo/core';
 import { Alert, AlertDocument, AlertSchema } from '../schemas/alert.schema';
 import { Invoice, InvoiceDocument, InvoiceSchema } from '../schemas/invoice.schema';
@@ -47,6 +48,8 @@ class DashboardService {
 
     const projection = await this.annualProjection(year);
     const projection4ta = await this.annualProjection4ta(year);
+    const settings = await this.settings.get();
+    const ra = upcomingRentaAnual(today, settings.rucLastDigit);
     const recentAlerts = await this.alerts.find().sort({ sentAt: -1 }).limit(10);
 
     return {
@@ -69,6 +72,7 @@ class DashboardService {
       })),
       projection,
       projection4ta,
+      rentaAnual: { ejercicio: ra.ejercicio, dueDate: ra.date, source: ra.source },
       recentAlerts,
     };
   }

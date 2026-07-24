@@ -4,6 +4,7 @@ export * from './habiles';
 export * from './fechas';
 export * from './cronograma';
 export * from './cronograma-sunat';
+export * from './renta-anual';
 export * from './calculos';
 export * from './summary';
 export * from './proyeccion';

@@ -56,6 +56,29 @@ export function detraccionSoonMsg(d: DetraccionAlertData): string {
   );
 }
 
+export interface RentaAnualReminderData {
+  ejercicio: number;
+  dueDateIso: string;
+  daysBefore: number;
+  estimated: boolean;
+  regularizacion3raCents: number; // saldo por regularizar de 3ra (RMT)
+  saldo4taCents: number; // saldo de 4ta (negativo = a favor)
+}
+
+export function rentaAnualReminderMsg(d: RentaAnualReminderData): string {
+  const cuando = d.daysBefore === 0 ? '🔴 VENCE HOY' : `📆 Faltan ${d.daysBefore} día(s)`;
+  const saldo4ta =
+    d.saldo4taCents >= 0
+      ? `4ta (RxH): pagar ${formatPen(d.saldo4taCents)}`
+      : `4ta (RxH): saldo a favor ${formatPen(-d.saldo4taCents)}`;
+  const base =
+    `${cuando} — Declaración Jurada ANUAL del IR, ejercicio ${d.ejercicio}\n` +
+    `Vencimiento: ${formatFechaLima(d.dueDateIso)}\n` +
+    `Regularización 3ra (RMT): ${formatPen(d.regularizacion3raCents)}\n` +
+    `${saldo4ta}`;
+  return d.estimated ? base + ESTIMATED_SUFFIX : base;
+}
+
 export interface DigestData {
   prevPeriod: string;
   facturadoCents: number;
