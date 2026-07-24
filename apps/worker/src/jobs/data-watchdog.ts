@@ -78,8 +78,10 @@ export async function dataWatchdog(): Promise<void> {
       `watchdog:cronograma:${y}:${today.slice(0, 7)}`,
       'SYSTEM',
       `📅 Falta cargar el cronograma oficial ${y} (dígito ${digit}) en cronograma.ts.\n` +
-        `SUNAT lo publica por R.S. en diciembre. Mientras tanto los vencimientos van ` +
-        `ESTIMADOS. Tras actualizar: POST /periods/recompute-due-dates (runbook del README).`,
+        `SUNAT lo publica por R.S. en diciembre. Mientras tanto los vencimientos van ESTIMADOS.\n` +
+        `Verificar: https://orientacion.sunat.gob.pe/cronograma-de-obligaciones-mensuales\n` +
+        `Feriados nuevos: https://busquedas.elperuano.pe/\n` +
+        `Tras actualizar la tabla: POST /periods/recompute-due-dates (runbook del README).`,
     );
   }
 }
