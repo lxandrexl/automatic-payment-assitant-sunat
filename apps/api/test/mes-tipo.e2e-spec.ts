@@ -110,6 +110,25 @@ describe('Flujo del mes tipo (SPEC §9.2)', () => {
     ).expect(400);
   });
 
+  it('registrar el pago del cliente adelanta la fecha límite de la detracción (§4.3)', async () => {
+    const created = await auth(
+      api().post('/api/v1/invoices').send({
+        kind: 'FACTURA',
+        clientId,
+        series: 'E001',
+        number: '2',
+        issueDate: '2026-06-25',
+        baseCents: 900000,
+      }),
+    ).expect(201);
+    expect(created.body.detraccion.depositDueDate).toContain('2026-07-07'); // 5.º hábil julio
+    // Pago el último día útil de junio (mar 30) → la fecha límite baja al pago.
+    const paid = await auth(
+      api().patch(`/api/v1/invoices/${created.body._id}`).send({ paidAt: '2026-06-30' }),
+    ).expect(200);
+    expect(paid.body.detraccion.depositDueDate).toContain('2026-06-30');
+  });
+
   it('crea el RxH: retención 8%, sin IGV ni detracción', async () => {
     const res = await auth(
       api().post('/api/v1/invoices').send({

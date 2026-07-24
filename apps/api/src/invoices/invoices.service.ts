@@ -76,7 +76,18 @@ export class InvoicesService {
 
   async update(id: string, dto: UpdateInvoiceDto): Promise<InvoiceDocument> {
     const doc = await this.byId(id);
-    if (dto.paidAt !== undefined) doc.paidAt = new Date(dto.paidAt);
+    if (dto.paidAt !== undefined) {
+      doc.paidAt = new Date(dto.paidAt);
+      // SPEC §4.3: el depósito vence en el pago o el 5.º hábil del mes siguiente,
+      // lo que ocurra primero → si el pago llegó antes, la fecha límite se ajusta.
+      if (
+        doc.detraccion &&
+        doc.detraccion.status === 'PENDING' &&
+        doc.paidAt < doc.detraccion.depositDueDate
+      ) {
+        doc.detraccion.depositDueDate = doc.paidAt;
+      }
+    }
     if (dto.status !== undefined) doc.status = dto.status;
     return doc.save();
   }
