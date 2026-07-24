@@ -21,6 +21,6 @@ jobs:
           script: |
             cd ~/automatic-payment-assitant-sunat
             git pull --ff-only
-            docker compose up -d --build
+            docker compose up -d --build --remove-orphans
             sleep 10
             docker compose exec -T api wget -qO- http://127.0.0.1:3001/api/v1/health
