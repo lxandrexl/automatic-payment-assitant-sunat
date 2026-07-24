@@ -77,11 +77,13 @@ export async function dataWatchdog(): Promise<void> {
     await sendOnce(
       `watchdog:cronograma:${y}:${today.slice(0, 7)}`,
       'SYSTEM',
-      `📅 Falta cargar el cronograma oficial ${y} (dígito ${digit}) en cronograma.ts.\n` +
-        `SUNAT lo publica por R.S. en diciembre. Mientras tanto los vencimientos van ESTIMADOS.\n` +
-        `Verificar: https://orientacion.sunat.gob.pe/cronograma-de-obligaciones-mensuales\n` +
-        `Feriados nuevos: https://busquedas.elperuano.pe/\n` +
-        `Tras actualizar la tabla: POST /periods/recompute-due-dates (runbook del README).`,
+      `📅 Falta cargar el cronograma oficial ${y} (dígito ${digit}).\n` +
+        `Mientras tanto los vencimientos van ESTIMADOS (⚠️ en cada recordatorio).\n\n` +
+        `Qué hacer (5 min):\n` +
+        `1. Abre: https://orientacion.sunat.gob.pe/cronograma-de-obligaciones-mensuales\n` +
+        `2. Copia las 12 fechas del dígito ${digit} del año ${y} (o el link de la R.S.)\n` +
+        `3. Pégaselas a Claude Code en el repo — él actualiza cronograma.ts, corre los ` +
+        `tests que validan la tabla, despliega y recalcula los periodos abiertos.`,
     );
   }
 }
