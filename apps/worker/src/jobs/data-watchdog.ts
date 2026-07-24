@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import {
+  COLUMNA_POR_DIGITO,
   compareCronograma,
   diffFeriados,
   hasOfficialCronograma,
@@ -69,7 +70,16 @@ async function checkFeriados(year: number): Promise<void> {
  * Verifica la tabla local contra la página oficial de SUNAT (HTML estático parseable).
  * Devuelve 'OK' | 'PARSE_FAIL' (página inexistente o formato cambiado).
  */
-async function checkCronogramaContraSunat(year: number): Promise<'OK' | 'PARSE_FAIL'> {
+/** Las 12 fechas del dígito dado, listas para pegar en cronograma.ts. */
+function fechasParaDigito(parsed: Record<string, string[]>, digit: number): string {
+  const col = COLUMNA_POR_DIGITO[digit] ?? 0;
+  return Object.keys(parsed)
+    .sort()
+    .map((p) => `${p}: ${parsed[p]![col]}`)
+    .join('\n');
+}
+
+async function checkCronogramaContraSunat(year: number, digit: number): Promise<'OK' | 'PARSE_FAIL'> {
   const url = urlCronogramaSunat(year);
   let texto = '';
   try {
@@ -101,11 +111,13 @@ async function checkCronogramaContraSunat(year: number): Promise<'OK' | 'PARSE_F
   const hash = createHash('sha1').update(detalle).digest('hex').slice(0, 8);
   const msg = esEstimado
     ? `📅 SUNAT ya publicó el cronograma ${year} y la app lo tiene ESTIMADO.\n` +
+      `Estas son las 12 fechas del dígito ${digit} (leídas de la página oficial):\n\n` +
+      `${fechasParaDigito(parsed, digit)}\n\n` +
       `Fuente: ${url}\n` +
-      `Pásale ese link (o las fechas) a Claude Code para cargar la tabla, correr los ` +
-      `tests y recalcular los periodos abiertos.`
+      `Pásame estas fechas (o el link) para cargar la tabla verificada, correr los tests ` +
+      `y recalcular los periodos abiertos.`
     : `🔴 El cronograma local NO coincide con la página de SUNAT (${year}):\n${detalle}\n` +
-      `Fuente: ${url}\nVerificar la R.S. (¿prórroga/errata?) y avisar a Claude Code.`;
+      `Fuente: ${url}\nVerificar la R.S. (¿prórroga/errata?) y avisarme.`;
   await sendOnce(`watchdog:cronograma:${year}:${hash}`, 'SYSTEM', msg);
   return 'OK';
 }
@@ -124,7 +136,7 @@ export async function dataWatchdog(): Promise<void> {
   // desde octubre, para detectar la publicación de la R.S. apenas salga).
   const aVerificar = [year, ...(month >= 10 ? [year + 1] : [])];
   for (const y of aVerificar) {
-    const resultado = await checkCronogramaContraSunat(y);
+    const resultado = await checkCronogramaContraSunat(y, digit);
     // Fallback: si la página no existe/cambió Y nuestra tabla falta, recordar a mano.
     if (resultado === 'PARSE_FAIL' && !hasOfficialCronograma(y, digit) && (y === year || month >= 11)) {
       await sendOnce(
