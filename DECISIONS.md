@@ -37,6 +37,17 @@ Fuera de alcance (consciente): la ruta alternativa de facturar al exterior como
 **exportación de servicios** (3ra, sin IGV/detracción, requiere Registro de Exportadores) —
 el SPEC la excluye de v1; decisión con contador si algún día conviene.
 
+## 2026-07-23 — Data estática vigilada por watchdog, no reemplazada por APIs
+
+El dueño pidió evaluar APIs para feriados y cronograma. Resultado de la investigación:
+(1) **Cronograma SUNAT: no existe API** — se publica por R.S. (PDF/web) cada diciembre;
+(2) **Feriados: Nager.Date** (gratis, sin key) cubre Perú pero **incompleta**: verificado en
+vivo el 2026-07-23, le faltan los feriados de leyes recientes (06-07, 07-23, 08-06, 12-09).
+Decisión: la data estática sigue siendo la fuente de verdad (determinista, testeable, sin
+dependencia de terceros en el cálculo de vencimientos) y un job mensual `data-watchdog` la
+vigila: cruza feriados contra Nager.Date (ignorando diferencias verificadas y feriados en
+fin de semana) y recuerda cargar el cronograma del año siguiente desde noviembre.
+
 ## 2026-07-23 — Fechas del core como strings ISO `YYYY-MM-DD`
 
 Toda la matemática de fechas de `packages/core` opera sobre strings ISO en hora de Lima

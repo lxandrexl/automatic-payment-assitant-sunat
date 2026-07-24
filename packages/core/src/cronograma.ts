@@ -38,6 +38,11 @@ function nextMonth(year: number, month: number): { year: number; month: number }
   return month === 12 ? { year: year + 1, month: 1 } : { year, month: month + 1 };
 }
 
+/** ¿Está cargada la tabla oficial de un año para el dígito dado? (watchdog de data) */
+export function hasOfficialCronograma(year: number, digit: number): boolean {
+  return OFICIAL[`${year}-01`]?.[digit] != null;
+}
+
 export function getDueDate(period: string, digit: number): { date: string; source: DueDateSource } {
   const official = OFICIAL[period]?.[digit];
   if (official) return { date: official, source: 'OFFICIAL' };

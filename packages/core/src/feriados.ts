@@ -5,6 +5,27 @@
 // EDITABLE: agregar aquí los años siguientes cuando se publiquen (los "días no laborables"
 // por decreto para el sector público NO van — no afectan vencimientos SUNAT).
 
+export function feriadosDelAnio(year: number): string[] {
+  return [...FERIADOS].filter((d) => d.startsWith(`${year}-`)).sort();
+}
+
+/**
+ * Cruce contra una fuente externa (watchdog): qué fechas reporta la fuente que no
+ * tenemos, y cuáles tenemos que la fuente no reporta. Cualquier diferencia se
+ * verifica a mano — la fuente de verdad sigue siendo este archivo.
+ */
+export function diffFeriados(
+  year: number,
+  fuenteExterna: string[],
+): { faltanEnLocal: string[]; sobranEnLocal: string[] } {
+  const local = new Set(feriadosDelAnio(year));
+  const externa = new Set(fuenteExterna.filter((d) => d.startsWith(`${year}-`)));
+  return {
+    faltanEnLocal: [...externa].filter((d) => !local.has(d)).sort(),
+    sobranEnLocal: [...local].filter((d) => !externa.has(d)).sort(),
+  };
+}
+
 export const FERIADOS: ReadonlySet<string> = new Set([
   // 2026
   '2026-01-01', // Año Nuevo

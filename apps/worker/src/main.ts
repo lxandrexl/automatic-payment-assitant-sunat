@@ -8,6 +8,7 @@ import { detraccionCheck } from './jobs/detraccion-check';
 import { buzonWatcher } from './jobs/buzon-watcher';
 import { monthlyDigest } from './jobs/monthly-digest';
 import { periodBootstrap } from './jobs/period-bootstrap';
+import { dataWatchdog } from './jobs/data-watchdog';
 
 const TZ = { timezone: 'America/Lima' } as const;
 
@@ -22,6 +23,7 @@ async function main() {
   cron.schedule('*/15 * * * *', () => void runJob('buzon-watcher', buzonWatcher), TZ);
   cron.schedule('0 9 1 * *', () => void runJob('monthly-digest', monthlyDigest), TZ);
   cron.schedule('0 1 1 * *', () => void runJob('period-bootstrap', periodBootstrap), TZ);
+  cron.schedule('0 10 1 * *', () => void runJob('data-watchdog', dataWatchdog), TZ);
 
   logger.info('jobs programados');
 }
