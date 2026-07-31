@@ -108,6 +108,35 @@ export interface AnnualProjection {
   gastosFaltantesParaTramo10Cents: number;
 }
 
+export interface IncomeLine {
+  id: string;
+  kind: 'FACTURA' | 'RXH';
+  ref: string;
+  issueDate: string;
+  baseCents: number;
+  igvCents: number;
+  totalCents: number;
+  detraccionDepositoCents: number;
+  retencionCents: number;
+  netoBancoCents: number;
+}
+
+export interface MonthIncome {
+  period: string;
+  emitidoCents: number;
+  igvCents: number;
+  detraccionDepositoCents: number;
+  retencionCents: number;
+  netoBancoCents: number;
+  lines: IncomeLine[];
+}
+
+export interface IncomeYear {
+  year: number;
+  months: MonthIncome[];
+  totals: Omit<MonthIncome, 'period' | 'lines'>;
+}
+
 export interface Alert {
   _id: string;
   type: string;

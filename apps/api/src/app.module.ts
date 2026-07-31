@@ -4,6 +4,7 @@ import { loadConfig } from './config';
 import { HealthController } from './health.controller';
 import { AlertsModule } from './alerts/alerts.module';
 import { DashboardModule } from './dashboard/dashboard.module';
+import { IncomeModule } from './income/income.module';
 import { InvoicesModule } from './invoices/invoices.module';
 import { NotifyModule } from './notify/notify.module';
 import { PeriodsModule } from './periods/periods.module';
@@ -20,6 +21,7 @@ import { SettingsModule } from './settings/settings.module';
     AlertsModule,
     DashboardModule,
     NotifyModule,
+    IncomeModule,
   ],
   controllers: [HealthController],
 })
