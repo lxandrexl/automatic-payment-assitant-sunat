@@ -95,11 +95,18 @@ export function ComprobanteForm(props: Props) {
           <>
             <Row label="Base" value={formatPen(baseCents)} />
             <Row label="IGV (18%)" value={formatPen(calc.factura.igvCents)} />
-            <Row label="Total" value={formatPen(calc.factura.totalCents)} strong />
+            <Row label="Importe total" value={formatPen(calc.factura.totalCents)} strong />
             {calc.factura.detraccion && (
-              <Row label="Detracción (12%)" value={formatPen(calc.factura.detraccion.amountCents)} />
+              <Row
+                label="Detracción (depósito BN)"
+                value={formatPen(calc.factura.detraccion.amountCents)}
+              />
             )}
-            <Row label="Neto a cobrar" value={formatPen(calc.factura.netCents)} strong />
+            <Row
+              label="Neto a cobrar (transferencia)"
+              value={formatPen(calc.factura.netCents)}
+              strong
+            />
           </>
         ) : (
           <>

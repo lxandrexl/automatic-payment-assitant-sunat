@@ -20,7 +20,15 @@ describe('computeFactura', () => {
     expect(f.igvCents).toBe(162000);
     expect(f.totalCents).toBe(1062000);
     expect(f.detraccion).toEqual({ amountCents: 127400, exactAmountCents: 127440 });
-    expect(f.netCents).toBe(1062000 - 127400);
+    // Neto = total − detracción EXACTA (SPEC §0: transferencia S/ 9,345.60), no la redondeada.
+    expect(f.netCents).toBe(934560); // 9,345.60
+  });
+
+  it('factura real Métrica (base 3,600): neto = 3,738.24, no 3,738.00', () => {
+    const f = computeFactura(360000, S);
+    expect(f.totalCents).toBe(424800); // 4,248.00
+    expect(f.detraccion).toEqual({ amountCents: 51000, exactAmountCents: 50976 }); // depósito 510
+    expect(f.netCents).toBe(373824); // 3,738.24 = 4,248.00 − 509.76
   });
 
   it('sin detracción si total <= S/ 700', () => {

@@ -22,7 +22,12 @@ export interface FacturaCalc {
   igvCents: number;
   totalCents: number;
   detraccion: DetraccionCalc | null;
-  /** Lo que transfiere el cliente: total − detracción (o total si no aplica). */
+  /**
+   * Lo que transfiere el cliente = total − detracción EXACTA (no la redondeada).
+   * El depósito al Banco de la Nación se redondea a soles enteros (amountCents),
+   * pero el "monto neto pendiente de pago" de la factura SUNAT usa el exacto.
+   * Caso base §0: 10,620 − 1,274.40 = 9,345.60 (no 9,346.00).
+   */
   netCents: number;
 }
 
@@ -37,7 +42,12 @@ export function computeFactura(baseCents: number, s: CalcSettings): FacturaCalc 
       exactAmountCents,
     };
   }
-  return { igvCents, totalCents, detraccion, netCents: totalCents - (detraccion?.amountCents ?? 0) };
+  return {
+    igvCents,
+    totalCents,
+    detraccion,
+    netCents: totalCents - (detraccion?.exactAmountCents ?? 0),
+  };
 }
 
 export interface RxhCalc {
