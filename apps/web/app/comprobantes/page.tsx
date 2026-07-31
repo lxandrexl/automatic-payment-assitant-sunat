@@ -42,6 +42,12 @@ export default async function ComprobantesPage({
                   </span>
                   <span className="text-sm">{formatPen(i.totalCents)}</span>
                 </div>
+                <div className="mt-1 flex items-center justify-between text-xs">
+                  <span className="text-neutral-500">Neto a cobrar</span>
+                  <span className="font-semibold text-emerald-400">
+                    {formatPen(i.totalCents - (i.detraccion?.exactAmountCents ?? i.retencion?.amountCents ?? 0))}
+                  </span>
+                </div>
                 {i.detraccion && (
                   <div className="mt-1 flex items-center gap-2 text-xs text-neutral-400">
                     <span>Detracción {formatPen(i.detraccion.amountCents)}</span>
