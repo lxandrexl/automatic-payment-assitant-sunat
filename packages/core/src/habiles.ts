@@ -40,6 +40,17 @@ export function nthBusinessDayOfMonth(year: number, month: number, n: number): s
   }
 }
 
+/** N días hábiles antes de iso (sin contar iso). */
+export function subtractBusinessDays(iso: string, n: number): string {
+  let d = iso;
+  let count = 0;
+  while (count < n) {
+    d = addDays(d, -1);
+    if (isBusinessDay(d)) count += 1;
+  }
+  return d;
+}
+
 /** Días hábiles estrictamente entre hoy y target (0 si target <= hoy). */
 export function businessDaysUntil(todayIso: string, targetIso: string): number {
   let count = 0;

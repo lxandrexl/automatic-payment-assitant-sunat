@@ -6,7 +6,7 @@
 // siguiente, con source ESTIMATED. Al publicarse una R.S. nueva se agrega la data aquí
 // y POST /periods/recompute-due-dates recalcula los periodos OPEN estimados.
 
-import { nextBusinessDayFrom, nthBusinessDayOfMonth } from './habiles';
+import { nextBusinessDayFrom, nthBusinessDayOfMonth, subtractBusinessDays } from './habiles';
 
 export type DueDateSource = 'OFFICIAL' | 'ESTIMATED';
 
@@ -57,6 +57,14 @@ export function getDueDate(period: string, digit: number): { date: string; sourc
   const next = nextMonth(year, month);
   const day16 = `${next.year}-${String(next.month).padStart(2, '0')}-16`;
   return { date: nextBusinessDayFrom(day16), source: 'ESTIMATED' };
+}
+
+/**
+ * Día sugerido para declarar/pagar: N días hábiles antes del vencimiento (colchón por
+ * si hay saturación del portal, temas del banco, o falta depositar la detracción).
+ */
+export function suggestedPayDate(dueDateIso: string, businessDaysBefore = 2): string {
+  return subtractBusinessDays(dueDateIso, businessDaysBefore);
 }
 
 /** Fecha límite del depósito de detracción: 5.º día hábil del mes siguiente a la emisión (SPEC §4.3). */

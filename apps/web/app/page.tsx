@@ -1,3 +1,4 @@
+import { suggestedPayDate } from '@tributo/core';
 import { apiGet } from '@/lib/api';
 import { formatFecha, formatPen } from '@/lib/format';
 import type { Dashboard } from '@/lib/types';
@@ -156,7 +157,10 @@ function HeroDeadline({
           <div className="mt-1 text-sm text-neutral-400">
             F.621{s && s.pago616Cents > 0 ? ' + F.616' : ''} · periodo {nextDue.period}
           </div>
-          <div className="text-sm text-neutral-400">{formatFecha(nextDue.dueDate)}</div>
+          <div className="text-sm text-neutral-400">vence {formatFecha(nextDue.dueDate)}</div>
+          <div className="text-xs text-emerald-500/80">
+            💡 pagar antes del {formatFecha(suggestedPayDate(nextDue.dueDate))}
+          </div>
         </div>
         <div className="text-right">
           <div className="text-[11px] uppercase tracking-wide text-neutral-500">A pagar (NPS)</div>

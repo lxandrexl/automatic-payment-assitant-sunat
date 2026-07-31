@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { getDueDate, getRentaAnualDueDate, todayLimaIso } from '@tributo/core';
+import { getDueDate, getRentaAnualDueDate, suggestedPayDate, todayLimaIso } from '@tributo/core';
 import { apiGet } from '@/lib/api';
 import { formatFecha } from '@/lib/format';
 import type { Period, Settings } from '@/lib/types';
@@ -92,6 +92,11 @@ export default async function CalendarioPage({
                     vence {formatFecha(m.due.date)}
                     {m.due.source === 'ESTIMATED' && ' · estimada'}
                   </div>
+                  {!noAplica && (
+                    <div className="text-xs text-emerald-500/80">
+                      💡 pagar antes del {formatFecha(suggestedPayDate(m.due.date))}
+                    </div>
+                  )}
                 </div>
                 <div className="flex items-center gap-2 text-right">
                   {!noAplica && (

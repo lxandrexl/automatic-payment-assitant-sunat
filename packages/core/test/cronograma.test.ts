@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { detraccionDepositDueDate, getDueDate, parsePeriod } from '../src/cronograma';
+import {
+  detraccionDepositDueDate,
+  getDueDate,
+  parsePeriod,
+  suggestedPayDate,
+} from '../src/cronograma';
 
 describe('cronograma F.621', () => {
   it('tabla oficial 2026 dígito 0 completa (R.S. citada en SPEC §4.1)', () => {
@@ -39,6 +44,13 @@ describe('cronograma F.621', () => {
     expect(() => getDueDate('2026-13', 0)).toThrow();
     expect(() => getDueDate('julio', 0)).toThrow();
     expect(parsePeriod('2026-07')).toEqual({ year: 2026, month: 7 });
+  });
+
+  it('suggestedPayDate: 2 días hábiles antes del vencimiento', () => {
+    // Vence mar 18/08/2026 → 17 lun (1), 14 vie (2) = 2026-08-14
+    expect(suggestedPayDate('2026-08-18')).toBe('2026-08-14');
+    // Con feriado de por medio: vence lun 16/11/2026 → 13 vie (1), 12 jue (2)
+    expect(suggestedPayDate('2026-11-16')).toBe('2026-11-12');
   });
 
   it('depositDueDate: 5.º hábil del mes siguiente a la emisión', () => {
