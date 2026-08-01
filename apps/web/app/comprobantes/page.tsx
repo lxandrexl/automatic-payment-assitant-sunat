@@ -4,6 +4,7 @@ import type { Invoice, Settings } from '@/lib/types';
 import { Card, Chip } from '@/components/ui';
 import { ComprobanteForm } from '@/components/comprobante-form';
 import { DetraccionDeposit } from '@/components/detraccion-deposit';
+import { Paginated } from '@/components/paginated';
 
 export const dynamic = 'force-dynamic';
 
@@ -32,9 +33,11 @@ export default async function ComprobantesPage({
         {invoices.length === 0 ? (
           <p className="text-sm text-neutral-400">Sin comprobantes.</p>
         ) : (
-          <ul className="space-y-3">
-            {invoices.map((i) => (
-              <li key={i._id} className="border-t border-neutral-800 pt-2">
+          <Paginated pageSize={6} label="comprobantes" className="space-y-3">
+            {[...invoices]
+              .sort((a, b) => b.issueDate.localeCompare(a.issueDate))
+              .map((i) => (
+              <div key={i._id} className="rounded-xl border border-neutral-800 bg-neutral-950/40 p-3">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium">
                     {i.kind} {i.series}-{i.number}{' '}
@@ -62,9 +65,9 @@ export default async function ComprobantesPage({
                     Retención 4ta {formatPen(i.retencion.amountCents)}
                   </p>
                 )}
-              </li>
+              </div>
             ))}
-          </ul>
+          </Paginated>
         )}
       </Card>
     </div>

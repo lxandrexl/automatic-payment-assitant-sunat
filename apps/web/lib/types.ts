@@ -67,6 +67,7 @@ export interface Purchase {
   creditFiscal: boolean;
   deductibleIR: boolean;
   bancarizado: boolean;
+  notes: string;
   bancarizacionWarning: string | null;
 }
 

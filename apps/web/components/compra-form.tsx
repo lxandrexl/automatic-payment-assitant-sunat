@@ -24,9 +24,11 @@ export function CompraForm() {
     supplierRuc: '',
     series: '',
     number: '',
+    concept: '',
     category: 'OTROS',
     baseSoles: '',
     bancarizado: true,
+    notes: '',
   });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -43,11 +45,22 @@ export function CompraForm() {
         supplierRuc: form.supplierRuc,
         series: form.series,
         number: form.number,
+        concept: form.concept || undefined,
         category: form.category,
         baseCents: toCents(Number(form.baseSoles) || 0),
         bancarizado: form.bancarizado,
+        notes: form.notes || undefined,
       });
-      setForm((f) => ({ ...f, supplierName: '', supplierRuc: '', series: '', number: '', baseSoles: '' }));
+      setForm((f) => ({
+        ...f,
+        supplierName: '',
+        supplierRuc: '',
+        series: '',
+        number: '',
+        concept: '',
+        baseSoles: '',
+        notes: '',
+      }));
       router.refresh();
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Error');
@@ -85,6 +98,23 @@ export function CompraForm() {
         </Field>
         <Field label="Número">
           <input value={form.number} onChange={(e) => set('number', e.target.value)} placeholder="123" className={inputCls} />
+        </Field>
+        <Field label="Concepto" full>
+          <input
+            value={form.concept}
+            onChange={(e) => set('concept', e.target.value)}
+            placeholder="Descripción del bien o servicio"
+            className={inputCls}
+          />
+        </Field>
+        <Field label="Notas (opcional)" full>
+          <textarea
+            value={form.notes}
+            onChange={(e) => set('notes', e.target.value)}
+            placeholder="Observaciones internas"
+            rows={2}
+            className={`${inputCls} resize-none`}
+          />
         </Field>
         <label className="col-span-2 flex items-center gap-2 rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-300">
           <input type="checkbox" checked={form.bancarizado} onChange={(e) => set('bancarizado', e.target.checked)} />

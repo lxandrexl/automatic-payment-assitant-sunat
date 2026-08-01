@@ -4,6 +4,7 @@ import { formatFecha, formatPen } from '@/lib/format';
 import type { Dashboard } from '@/lib/types';
 import { Card, Chip, Row, SectionTitle, Stat, urgencyTone } from '@/components/ui';
 import { DeclareButton } from '@/components/declare-button';
+import { Paginated } from '@/components/paginated';
 
 export const dynamic = 'force-dynamic';
 
@@ -121,14 +122,17 @@ export default async function Home() {
         {d.recentAlerts.length === 0 ? (
           <p className="text-sm text-neutral-500">Sin alertas todavía.</p>
         ) : (
-          <ul className="divide-y divide-neutral-800/70 text-sm">
+          <Paginated pageSize={6} label="alertas" className="text-sm">
             {d.recentAlerts.map((a) => (
-              <li key={a._id} className="flex justify-between gap-3 py-2">
+              <div
+                key={a._id}
+                className="flex justify-between gap-3 border-b border-neutral-800/70 py-2 last:border-b-0"
+              >
                 <span className="line-clamp-2 text-neutral-300">{a.payloadPreview}</span>
                 <span className="shrink-0 text-xs text-neutral-500">{formatFecha(a.sentAt)}</span>
-              </li>
+              </div>
             ))}
-          </ul>
+          </Paginated>
         )}
       </Card>
     </div>
