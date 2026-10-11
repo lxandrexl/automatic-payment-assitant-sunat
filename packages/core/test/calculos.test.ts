@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   computeFactura,
   computeRxh,
+  computeRxhExterior,
   isDetraccionDepositMatch,
   type CalcSettings,
 } from '../src/calculos';
@@ -71,5 +72,19 @@ describe('computeRxh', () => {
   it('sin retención hasta S/ 1,500 inclusive', () => {
     expect(computeRxh(150000, S)).toEqual({ retencionCents: 0, netCents: 150000 });
     expect(computeRxh(150100, S)).toEqual({ retencionCents: 12008, netCents: 138092 });
+  });
+});
+
+describe('computeRxhExterior (RxH en USD, retención 10% en el exterior)', () => {
+  it('2,800 USD a TC 3.43: llegan 2,520 USD pero la base en Perú es 2,800 × TC', () => {
+    expect(computeRxhExterior(280000, 3.43, 0.1)).toEqual({
+      baseCents: 960400, // S/ 9,604.00 — sobre esto va el F.616
+      retencionExteriorFxCents: 28000,
+      netFxCents: 252000,
+      netCents: 864360,
+    });
+  });
+  it('sin retención exterior, neto = bruto', () => {
+    expect(computeRxhExterior(100000, 3.5, 0).netFxCents).toBe(100000);
   });
 });

@@ -10,6 +10,9 @@ export class Client {
   @Prop({ required: true }) defaultBaseCents!: number;
   // false = cliente extranjero (ej. Chile): no es agente de retención → RxH sin 8%.
   @Prop({ default: true }) domiciliado!: boolean;
+  // Moneda en que cobras a este cliente y % que él retiene EN SU PAÍS (no es impuesto peruano).
+  @Prop({ default: 'PEN', enum: ['PEN', 'USD'] }) currency!: 'PEN' | 'USD';
+  @Prop({ default: 0 }) retencionExteriorRate!: number;
 }
 const ClientSchema = SchemaFactory.createForClass(Client);
 

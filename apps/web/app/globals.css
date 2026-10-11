@@ -2,10 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  color-scheme: dark;
+body {
+  @apply bg-page text-ink antialiased;
 }
 
-body {
-  @apply bg-neutral-950 text-neutral-100;
+/* Pantallas grandes: escalar todo (Tailwind usa rem) en vez de dejar el contenido pequeño. */
+@media (min-width: 1536px) {
+  html { font-size: 17px; }
+}
+@media (min-width: 1920px) {
+  html { font-size: 19px; }
 }

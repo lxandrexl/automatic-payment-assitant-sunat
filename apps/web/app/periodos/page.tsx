@@ -16,12 +16,12 @@ export default async function PeriodosPage({
   return (
     <Card title={`Periodos ${year}`}>
       {periods.length === 0 ? (
-        <p className="text-sm text-neutral-400">Sin periodos registrados este año.</p>
+        <p className="text-sm text-ink2">Sin periodos registrados este año.</p>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-neutral-500">
+              <tr className="text-left text-ink3">
                 <th className="py-1">Periodo</th>
                 <th>Vence</th>
                 <th>Estado</th>
@@ -31,7 +31,7 @@ export default async function PeriodosPage({
             </thead>
             <tbody>
               {periods.map((p) => (
-                <tr key={p._id} className="border-t border-neutral-800">
+                <tr key={p._id} className="border-t border-line">
                   <td className="py-2 font-medium">{p._id}</td>
                   <td>{formatFecha(p.dueDate)}</td>
                   <td>

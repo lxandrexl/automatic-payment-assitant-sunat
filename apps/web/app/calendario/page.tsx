@@ -1,29 +1,17 @@
 import Link from 'next/link';
 import { getDueDate, getRentaAnualDueDate, suggestedPayDate, todayLimaIso } from '@tributo/core';
 import { apiGet } from '@/lib/api';
-import { formatFecha } from '@/lib/format';
+import {
+  diasHasta,
+  diasLabel,
+  formatFechaCorta,
+  formatPen,
+  formatPeriodo,
+} from '@/lib/format';
 import type { Period, Settings } from '@/lib/types';
-import { Card, Chip, SectionTitle, type Tone } from '@/components/ui';
+import { Card, Chip, PageHeader, Segmented } from '@/components/ui';
 
 export const dynamic = 'force-dynamic';
-
-const MESES = [
-  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-  'Julio', 'Agosto', 'Setiembre', 'Octubre', 'Noviembre', 'Diciembre',
-];
-
-function daysBetween(todayIso: string, dueIso: string): number {
-  const a = new Date(`${todayIso}T00:00:00Z`).getTime();
-  const b = new Date(`${dueIso.slice(0, 10)}T00:00:00Z`).getTime();
-  return Math.round((b - a) / 86_400_000);
-}
-
-function daysLabel(days: number): string {
-  if (days < 0) return `hace ${-days} d`;
-  if (days === 0) return 'HOY';
-  if (days === 1) return 'mañana';
-  return `en ${days} d`;
-}
 
 export default async function CalendarioPage({
   searchParams,
@@ -42,99 +30,115 @@ export default async function CalendarioPage({
   const meses = Array.from({ length: 12 }, (_, i) => {
     const period = `${year}-${String(i + 1).padStart(2, '0')}`;
     const due = getDueDate(period, digit);
-    return { period, monthIdx: i, due, existing: byId.get(period) };
+    return { period, due, existing: byId.get(period) };
   });
 
-  // El próximo vencimiento (mensual) a resaltar.
+  // El próximo vencimiento pendiente es el que se resalta.
   const proximo = meses.find((m) => {
     const st = m.existing?.status;
     return m.due.date >= today && st !== 'PAID' && st !== 'DECLARED';
   });
 
-  // DJ Anual: la próxima que realmente te toca (ejercicio en curso o el que cierra).
   const ejercicio = getRentaAnualDueDate(year - 1, digit).date >= today ? year - 1 : year;
   const dj = getRentaAnualDueDate(ejercicio, digit);
 
   return (
-    <div className="space-y-6">
-      <Card title="Calendario tributario">
-        <div className="flex items-center justify-between">
-          <span className="text-2xl font-bold">{year}</span>
-          <div className="flex gap-1 text-sm">
-            <Link href={`/calendario?year=${year - 1}`} className="rounded-lg bg-neutral-800 px-3 py-1.5 hover:bg-neutral-700">
-              ← {year - 1}
-            </Link>
-            <Link href={`/calendario?year=${year + 1}`} className="rounded-lg bg-neutral-800 px-3 py-1.5 hover:bg-neutral-700">
-              {year + 1} →
-            </Link>
-          </div>
-        </div>
-      </Card>
+    <>
+      <PageHeader
+        title="Calendario"
+        intro="Cada mes presentas una declaración a SUNAT. Toca un mes para ver cuánto pagas y cómo declararlo."
+        actions={
+          <Segmented
+            items={[year - 1, year, year + 1].map((y) => ({
+              href: `/calendario?year=${y}`,
+              label: String(y),
+              active: y === year,
+            }))}
+          />
+        }
+      />
 
-      <section>
-        <SectionTitle>Declaración mensual (F.621 / F.616)</SectionTitle>
-        <div className="overflow-hidden rounded-2xl border border-neutral-800">
-          {meses.map((m) => {
-            const st = monthStatus(m.existing?.status, m.due.date, today);
-            const esProximo = proximo?.period === m.period;
-            const noAplica = !m.existing && m.due.date < today;
-            return (
-              <RowLink
-                key={m.period}
-                href={m.existing ? `/periodos/${m.period}` : `/comprobantes?period=${m.period}`}
-                highlight={esProximo}
-              >
-                <div className="min-w-0">
-                  <div className={`text-sm font-medium ${noAplica ? 'text-neutral-600' : ''}`}>
-                    {MESES[m.monthIdx]}
-                  </div>
-                  <div className="text-xs text-neutral-500">
-                    vence {formatFecha(m.due.date)}
-                    {m.due.source === 'ESTIMATED' && ' · estimada'}
-                  </div>
-                  {!noAplica && (
-                    <div className="text-xs text-emerald-500/80">
-                      💡 pagar antes del {formatFecha(suggestedPayDate(m.due.date))}
-                    </div>
-                  )}
-                </div>
-                <div className="flex items-center gap-2 text-right">
-                  {!noAplica && (
-                    <span className="text-xs text-neutral-400">{daysLabel(daysBetween(today, m.due.date))}</span>
-                  )}
-                  <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${st.cls}`}>
-                    {st.label}
-                  </span>
-                </div>
-              </RowLink>
-            );
-          })}
-        </div>
-      </section>
-
-      <section>
-        <SectionTitle>Declaración Jurada Anual</SectionTitle>
-        <Card tone="info">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-lg font-semibold">Ejercicio {ejercicio}</div>
-              <div className="text-sm text-neutral-400">
-                vence {formatFecha(dj.date)} · {daysLabel(daysBetween(today, dj.date))}
-              </div>
+      <div className="grid gap-6 lg:grid-cols-3 lg:items-start">
+        <div className="lg:col-span-2"><Card title="Declaraciones mensuales">
+          <div className="-mx-4 -mb-4 overflow-hidden rounded-b-2xl lg:col-span-2">
+            <div className="hidden grid-cols-[1.2fr_1fr_1fr_1fr_auto] gap-3 border-y border-line bg-page px-4 py-2 text-xs font-medium text-ink3 md:grid">
+              <span>Mes</span>
+              <span>Vence</span>
+              <span>Pagar antes del</span>
+              <span>Monto</span>
+              <span className="w-24 text-right">Estado</span>
             </div>
-            <Chip>{dj.source}</Chip>
+            {meses.map((m) => {
+              const st = monthStatus(m.existing?.status, m.due.date, today);
+              const esProximo = proximo?.period === m.period;
+              const pasado = !m.existing && m.due.date < today;
+              const monto = m.existing?.summary?.npsEstimadoCents;
+              return (
+                <Link
+                  key={m.period}
+                  href={m.existing ? `/periodos/${m.period}` : `/comprobantes?period=${m.period}`}
+                  className={`group grid grid-cols-[1fr_auto] items-center gap-x-3 gap-y-0.5 border-b border-line px-4 py-3 last:border-b-0 md:grid-cols-[1.2fr_1fr_1fr_1fr_auto] ${
+                    esProximo ? 'bg-brand-soft/60' : 'hover:bg-page'
+                  }`}
+                >
+                  <div className="min-w-0">
+                    <div className={`text-sm font-medium ${pasado ? 'text-ink3' : 'text-ink'}`}>
+                      {formatPeriodo(m.period).split(' ')[0]}
+                      {esProximo && (
+                        <span className="ml-2 rounded bg-brand px-1.5 py-0.5 text-[10px] font-semibold uppercase text-white">
+                          Siguiente
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-xs text-ink3 md:hidden">
+                      vence {formatFechaCorta(m.due.date)}
+                      {m.existing?.status === 'OPEN' && ` · ${diasLabel(diasHasta(today, m.due.date))}`}
+                    </div>
+                  </div>
+                  <div className="hidden text-sm text-ink2 md:block">
+                    {formatFechaCorta(m.due.date)}
+                    {m.due.source === 'ESTIMATED' && <span className="text-ink3"> (est.)</span>}
+                    {m.existing?.status === 'OPEN' && (
+                      <span className="block text-xs text-ink3">{diasLabel(diasHasta(today, m.due.date))}</span>
+                    )}
+                  </div>
+                  <div className="hidden text-sm text-ink2 md:block">
+                    {pasado ? '—' : formatFechaCorta(suggestedPayDate(m.due.date))}
+                  </div>
+                  <div className="hidden text-sm tabular-nums text-ink md:block">
+                    {monto != null ? formatPen(monto) : '—'}
+                  </div>
+                  <div className="flex items-center justify-end gap-2 md:w-24">
+                    <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${st.cls}`}>{st.label}</span>
+                    <span aria-hidden className="text-ink3 group-hover:text-brand md:hidden">›</span>
+                  </div>
+                </Link>
+              );
+            })}
           </div>
-          <p className="mt-2 text-xs text-neutral-500">
-            Regulariza el IR de 3ra y 4ta. Cronograma MYPE/PN (plazo ampliado, mayo/junio).
-          </p>
         </Card>
-      </section>
+        </div>
 
-      <p className="px-1 text-xs text-neutral-600">
-        Las detracciones vencen el 5.º día hábil del mes siguiente a cada factura (o la fecha de
-        pago, lo que ocurra primero). Se listan por comprobante en Emitir e Inicio.
-      </p>
-    </div>
+        <div className="space-y-6">
+          <Card title="Declaración anual de renta" action={<Chip>{dj.source}</Chip>}>
+            <div className="text-lg font-semibold text-ink">Año {ejercicio}</div>
+            <div className="text-sm text-ink2">
+              {formatFechaCorta(dj.date)} · {diasLabel(diasHasta(today, dj.date))}
+            </div>
+            <p className="mt-3 text-xs leading-relaxed text-ink3">
+              Una vez al año ajustas el impuesto a la renta de tu negocio y de tus honorarios
+              (normalmente mayo o junio).
+            </p>
+          </Card>
+          <Card title="Detracciones">
+            <p className="text-xs leading-relaxed text-ink3">
+              Vencen el 5.º día hábil del mes siguiente a cada factura (o la fecha de pago, lo que
+              ocurra primero). Las ves por comprobante en Ventas.
+            </p>
+          </Card>
+        </div>
+      </div>
+    </>
   );
 }
 
@@ -143,40 +147,13 @@ function monthStatus(
   dueIso: string,
   today: string,
 ): { label: string; cls: string } {
-  if (status === 'PAID') return { label: 'Pagado', cls: 'bg-emerald-500/15 text-emerald-400' };
-  if (status === 'DECLARED') return { label: 'Declarado', cls: 'bg-sky-500/15 text-sky-400' };
+  if (status === 'PAID') return { label: 'Pagado', cls: 'bg-ok-soft text-ok' };
+  if (status === 'DECLARED') return { label: 'Declarado', cls: 'bg-info-soft text-info' };
   if (status === 'OPEN') {
-    const d = daysBetween(today, dueIso);
-    const tone: Tone = d < 0 ? 'urgent' : d <= 3 ? 'urgent' : d <= 7 ? 'warn' : 'ok';
-    const cls =
-      tone === 'urgent'
-        ? 'bg-red-500/15 text-red-400'
-        : tone === 'warn'
-          ? 'bg-amber-500/15 text-amber-400'
-          : 'bg-amber-500/15 text-amber-400';
-    return { label: d < 0 ? 'Vencido' : 'Pendiente', cls };
+    const d = diasHasta(today, dueIso);
+    if (d < 0) return { label: 'Vencido', cls: 'bg-bad-soft text-bad' };
+    return { label: 'Pendiente', cls: d <= 3 ? 'bg-bad-soft text-bad' : 'bg-warn-soft text-warn' };
   }
-  if (dueIso < today) return { label: '—', cls: 'bg-neutral-800 text-neutral-600' };
-  return { label: 'Próximo', cls: 'bg-neutral-700/40 text-neutral-300' };
-}
-
-function RowLink({
-  href,
-  highlight,
-  children,
-}: {
-  href: string;
-  highlight?: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <Link
-      href={href}
-      className={`flex items-center justify-between gap-3 border-b border-neutral-800 px-4 py-3 last:border-b-0 ${
-        highlight ? 'bg-emerald-500/[0.06]' : 'hover:bg-neutral-900'
-      }`}
-    >
-      {children}
-    </Link>
-  );
+  if (dueIso < today) return { label: 'Sin datos', cls: 'bg-sunken text-ink3' };
+  return { label: 'Próximo', cls: 'bg-sunken text-ink2' };
 }

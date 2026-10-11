@@ -18,6 +18,8 @@ interface IncomeLine {
   totalCents: number;
   detraccionDepositoCents: number; // a tu cuenta del Banco de la Nación
   retencionCents: number; // a SUNAT (adelanto de IR 4ta)
+  retencionExteriorCents: number; // retenido en el exterior por el cliente (en soles, referencial)
+  foreign: { currency: 'USD'; grossCents: number; withholdingCents: number; exchangeRate: number } | null;
   netoBancoCents: number; // lo que te transfieren
 }
 
@@ -97,6 +99,7 @@ type LeanInvoice = {
   totalCents?: number;
   detraccion?: { amountCents?: number; exactAmountCents?: number } | null;
   retencion?: { amountCents?: number } | null;
+  foreign?: { currency: 'USD'; grossCents: number; withholdingCents: number; exchangeRate: number } | null;
 };
 
 function toLine(i: LeanInvoice): IncomeLine {
@@ -106,7 +109,8 @@ function toLine(i: LeanInvoice): IncomeLine {
   const detrExacta = i.detraccion?.exactAmountCents ?? 0;
   const detrDeposito = i.detraccion?.amountCents ?? 0;
   const retencion = i.retencion?.amountCents ?? 0;
-  const netoBanco = i.kind === 'FACTURA' ? total - detrExacta : base - retencion;
+  const exterior = i.foreign ? Math.round(i.foreign.withholdingCents * i.foreign.exchangeRate) : 0;
+  const netoBanco = i.kind === 'FACTURA' ? total - detrExacta : base - retencion - exterior;
   return {
     id: String(i._id),
     kind: i.kind,
@@ -117,6 +121,8 @@ function toLine(i: LeanInvoice): IncomeLine {
     totalCents: total,
     detraccionDepositoCents: detrDeposito,
     retencionCents: retencion,
+    retencionExteriorCents: exterior,
+    foreign: i.foreign ?? null,
     netoBancoCents: netoBanco,
   };
 }

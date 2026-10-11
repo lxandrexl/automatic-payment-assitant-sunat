@@ -10,11 +10,13 @@ export function Paginated({
   pageSize = 6,
   className = 'space-y-2',
   label = 'registros',
+  footerClass = '',
 }: {
   children: React.ReactNode;
   pageSize?: number;
   className?: string;
   label?: string;
+  footerClass?: string;
 }) {
   const items = Children.toArray(children);
   const [page, setPage] = useState(0);
@@ -27,7 +29,7 @@ export function Paginated({
     <>
       <div className={className}>{shown}</div>
       {pages > 1 && (
-        <div className="mt-3 flex items-center justify-between border-t border-neutral-800 pt-3 text-xs text-neutral-400">
+        <div className={`mt-3 flex items-center justify-between border-t border-line pt-3 text-xs text-ink2 ${footerClass}`}>
           <span>
             {items.length} {label} · pág {current + 1}/{pages}
           </span>
@@ -35,14 +37,14 @@ export function Paginated({
             <button
               onClick={() => setPage(current - 1)}
               disabled={current === 0}
-              className="rounded-md bg-neutral-800 px-2 py-1 hover:bg-neutral-700 disabled:opacity-40"
+              className="rounded-md bg-sunken px-2 py-1 hover:bg-line disabled:opacity-40"
             >
               ← Ant.
             </button>
             <button
               onClick={() => setPage(current + 1)}
               disabled={current >= pages - 1}
-              className="rounded-md bg-neutral-800 px-2 py-1 hover:bg-neutral-700 disabled:opacity-40"
+              className="rounded-md bg-sunken px-2 py-1 hover:bg-line disabled:opacity-40"
             >
               Sig. →
             </button>

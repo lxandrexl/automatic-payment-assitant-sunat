@@ -3,9 +3,12 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { mutate } from '@/lib/mutate';
+import { inputCls } from '@/components/ui';
 
 export function DeclareButton({ period }: { period: string }) {
   const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [ref, setRef] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -13,8 +16,7 @@ export function DeclareButton({ period }: { period: string }) {
     setBusy(true);
     setErr(null);
     try {
-      const paymentRef = window.prompt('Nro de orden NPS / constancia (opcional):') ?? undefined;
-      await mutate(`/periods/${period}/declare`, 'POST', paymentRef ? { paymentRef } : {});
+      await mutate(`/periods/${period}/declare`, 'POST', ref.trim() ? { paymentRef: ref.trim() } : {});
       router.refresh();
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Error');
@@ -23,16 +25,40 @@ export function DeclareButton({ period }: { period: string }) {
     }
   }
 
-  return (
-    <div>
+  if (!open) {
+    return (
       <button
-        onClick={declare}
-        disabled={busy}
-        className="mt-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
+        onClick={() => setOpen(true)}
+        className="w-full rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-hover sm:w-auto"
       >
-        {busy ? 'Marcando…' : 'Marcar declarado'}
+        ✓ Ya declaré y pagué
       </button>
-      {err && <p className="mt-1 text-sm text-red-400">{err}</p>}
+    );
+  }
+  return (
+    <div className="space-y-2">
+      <input
+        value={ref}
+        onChange={(e) => setRef(e.target.value)}
+        placeholder="N.º de orden o constancia (opcional)"
+        className={inputCls}
+      />
+      <div className="flex gap-2">
+        <button
+          onClick={declare}
+          disabled={busy}
+          className="rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-hover disabled:opacity-50"
+        >
+          {busy ? 'Guardando…' : 'Confirmar'}
+        </button>
+        <button
+          onClick={() => setOpen(false)}
+          className="rounded-xl bg-sunken px-4 py-2 text-sm hover:bg-line"
+        >
+          Cancelar
+        </button>
+      </div>
+      {err && <p className="text-sm text-bad">{err}</p>}
     </div>
   );
 }

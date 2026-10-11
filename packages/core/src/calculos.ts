@@ -89,3 +89,34 @@ export function isDetraccionDepositMatch(depositCents: number, det: DetraccionCa
   const hi = Math.max(det.exactAmountCents, det.amountCents) + 100;
   return depositCents >= lo && depositCents <= hi;
 }
+
+export interface RxhExteriorCalc {
+  /** Bruto convertido a soles: es la base sobre la que se calcula el impuesto en Perú. */
+  baseCents: number;
+  /** Lo que el cliente retiene en SU país (en moneda extranjera). No es impuesto peruano. */
+  retencionExteriorFxCents: number;
+  /** Lo que realmente te transfieren, en moneda extranjera. */
+  netFxCents: number;
+  /** netFxCents convertido a soles (referencial: el banco aplica su propio tipo de cambio). */
+  netCents: number;
+}
+
+/**
+ * RxH cobrado en moneda extranjera. SUNAT grava el BRUTO (convertido con el tipo de cambio),
+ * aunque el cliente retenga un % en su país y a tu banco llegue menos.
+ * Ej.: 2,800 USD, 10% → llegan 2,520 USD; la base en Perú sigue siendo 2,800 USD × TC.
+ */
+export function computeRxhExterior(
+  grossFxCents: number,
+  exchangeRate: number,
+  retencionExteriorRate: number,
+): RxhExteriorCalc {
+  const retencionExteriorFxCents = Math.round(grossFxCents * retencionExteriorRate);
+  const netFxCents = grossFxCents - retencionExteriorFxCents;
+  return {
+    baseCents: Math.round(grossFxCents * exchangeRate),
+    retencionExteriorFxCents,
+    netFxCents,
+    netCents: Math.round(netFxCents * exchangeRate),
+  };
+}

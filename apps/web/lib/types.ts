@@ -48,6 +48,8 @@ export interface Invoice {
   totalCents: number;
   detraccion: Detraccion | null;
   retencion: { amountCents: number } | null;
+  /** RxH cobrado en moneda extranjera (montos en céntimos de esa moneda; baseCents va en soles). */
+  foreign?: { currency: 'USD'; grossCents: number; exchangeRate: number; withholdingCents: number } | null;
   status: 'ISSUED' | 'PAID' | 'VOIDED';
 }
 
@@ -78,6 +80,9 @@ export interface Client {
   kind: 'FACTURA' | 'RXH';
   defaultBaseCents: number;
   domiciliado: boolean;
+  currency?: 'PEN' | 'USD';
+  /** % que el cliente retiene en SU país (0–1). No es impuesto peruano. */
+  retencionExteriorRate?: number;
 }
 
 export interface Settings {
@@ -119,6 +124,8 @@ export interface IncomeLine {
   totalCents: number;
   detraccionDepositoCents: number;
   retencionCents: number;
+  retencionExteriorCents?: number;
+  foreign?: Invoice['foreign'];
   netoBancoCents: number;
 }
 

@@ -1,206 +1,265 @@
+import Link from 'next/link';
 import { suggestedPayDate } from '@tributo/core';
 import { apiGet } from '@/lib/api';
-import { formatFecha, formatPen } from '@/lib/format';
+import {
+  diasHasta,
+  diasLabel,
+  formatFechaCorta,
+  formatPen,
+  formatPeriodo,
+} from '@/lib/format';
 import type { Dashboard } from '@/lib/types';
-import { Card, Chip, Row, SectionTitle, Stat, urgencyTone } from '@/components/ui';
-import { DeclareButton } from '@/components/declare-button';
+import {
+  Card,
+  Chip,
+  MoreLink,
+  PageHeader,
+  PrimaryLink,
+  Stat,
+  urgencyTone,
+} from '@/components/ui';
 import { Paginated } from '@/components/paginated';
 
 export const dynamic = 'force-dynamic';
 
-function daysBetween(todayIso: string, dueIso: string): number {
-  const a = new Date(`${todayIso}T00:00:00Z`).getTime();
-  const b = new Date(`${dueIso.slice(0, 10)}T00:00:00Z`).getTime();
-  return Math.round((b - a) / 86_400_000);
-}
-
-function daysLabel(days: number): string {
-  if (days < 0) return `vencido hace ${-days} d`;
-  if (days === 0) return 'vence HOY';
-  if (days === 1) return 'vence mañana';
-  return `faltan ${days} días`;
-}
-
 export default async function Home() {
   const d = await apiGet<Dashboard>('/dashboard');
+  const cur = d.currentPeriod?.summary;
 
   return (
-    <div className="space-y-6">
-      {/* HERO — lo único que importa de un vistazo */}
-      {d.nextDue ? (
-        <HeroDeadline today={d.today} nextDue={d.nextDue} />
-      ) : (
-        <Card tone="ok">
-          <p className="text-sm text-emerald-300">✅ No tienes vencimientos abiertos.</p>
-        </Card>
-      )}
+    <>
+      <PageHeader title="Resumen" intro={`Hoy es ${formatFechaCorta(d.today)}. Esto es lo que necesitas saber.`} />
 
-      {/* Detracciones por cobrar — solo si hay algo que hacer */}
-      {d.detracciones.length > 0 && (
-        <Card
-          tone={d.detracciones.some((x) => x.status === 'OVERDUE') ? 'urgent' : 'warn'}
-          title="Detracciones por verificar"
-        >
-          <ul className="space-y-2">
-            {d.detracciones.map((det) => (
-              <li key={det.id} className="flex items-center justify-between gap-2">
-                <span className="text-sm">
-                  <span className="font-medium tabular-nums">{formatPen(det.amountCents)}</span>
-                  <span className="text-neutral-500"> · {det.period}</span>
-                  {det.depositDueDate && (
-                    <span className="text-neutral-500"> · límite {formatFecha(det.depositDueDate)}</span>
-                  )}
-                </span>
-                <Chip>{det.status}</Chip>
-              </li>
-            ))}
-          </ul>
-        </Card>
-      )}
+      {/* 1. Lo urgente: el próximo pago + lista de pendientes */}
+      <div className="grid gap-6 lg:grid-cols-5 lg:items-start">
+        <div className="lg:col-span-3">
+          {d.nextDue ? (
+            <NextPayment today={d.today} nextDue={d.nextDue} />
+          ) : (
+            <Card tone="ok">
+              <p className="text-base font-semibold text-ink">Estás al día</p>
+              <p className="mt-1 text-sm text-ink2">No tienes declaraciones pendientes con SUNAT.</p>
+            </Card>
+          )}
+        </div>
+        <div className="lg:col-span-2">
+          <Pending d={d} />
+        </div>
+      </div>
 
-      {/* Mes en curso — números clave como tiles */}
-      {d.currentPeriod && (
-        <section>
-          <SectionTitle>Mes en curso · {d.currentPeriod.period}</SectionTitle>
-          <div className="grid grid-cols-2 gap-3">
-            <Stat label="IGV a pagar" value={formatPen(d.currentPeriod.summary.igvPagarCents)} />
-            <Stat label="Pago a cuenta 3ra" value={formatPen(d.currentPeriod.summary.pagoCuentaCents)} />
+      {/* 2. Números del mes en curso */}
+      {d.currentPeriod && cur && (
+        <section className="mt-8">
+          <div className="mb-3 flex items-baseline justify-between">
+            <h2 className="text-base font-semibold text-ink">
+              {formatPeriodo(d.currentPeriod.period)}
+              <span className="ml-2 text-sm font-normal text-ink3">mes en curso</span>
+            </h2>
+            <MoreLink href={`/periodos/${d.currentPeriod.period}`}>Ver cómo se calcula</MoreLink>
+          </div>
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             <Stat
-              label="NPS estimado"
-              value={formatPen(d.currentPeriod.summary.npsEstimadoCents)}
-              tone="info"
-              hint="a pagar en el F.621"
+              label="IGV que debes"
+              value={formatPen(cur.igvPagarCents)}
+              hint="El IGV que cobraste menos el de tus compras"
             />
-            {d.currentPeriod.summary.pago616Cents > 0 && (
-              <Stat
-                label="F.616 (4ta)"
-                value={formatPen(d.currentPeriod.summary.pago616Cents)}
-                tone="info"
-                hint="RxH sin retención"
-              />
-            )}
+            <Stat
+              label="Adelanto de renta (negocio)"
+              value={formatPen(cur.pagoCuentaCents)}
+              hint="1% de tus ventas del mes"
+            />
+            <Stat
+              label="Adelanto de renta (honorarios)"
+              value={formatPen(cur.pago616Cents)}
+              hint={cur.pago616Cents > 0 ? '8% de recibos sin retención' : 'No te toca este mes'}
+            />
+            <Stat
+              label="Pagarías de tu bolsillo"
+              value={formatPen(cur.npsEstimadoCents)}
+              tone="info"
+              hint="Ya descontadas tus detracciones"
+            />
           </div>
         </section>
       )}
 
-      {/* Proyección anual — 3ra y 4ta, compacto lado a lado */}
-      <section>
-        <SectionTitle>Proyección del año</SectionTitle>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Card title="Negocio · 3ra (RMT)">
-            <Row label="Renta neta" value={formatPen(d.projection.rentaNetaCents)} />
-            <Row label="IR estimado" value={formatPen(d.projection.irEstimadoCents)} />
-            <Row
-              label="Regularización"
-              value={formatPen(d.projection.regularizacionEstimadaCents)}
-              strong
-            />
-            {d.projection.gastosFaltantesParaTramo10Cents > 0 && (
-              <p className="mt-2 rounded-lg bg-amber-500/10 p-2 text-xs text-amber-300">
-                💡 Con {formatPen(d.projection.gastosFaltantesParaTramo10Cents)} más en gastos
-                deducibles te quedas en el tramo del 10%.
-              </p>
+      {/* 3. Mirada al año */}
+      <div className="mt-8 grid gap-6 lg:grid-cols-5 lg:items-start">
+        <div className="lg:col-span-3">
+          <Projection d={d} />
+        </div>
+        <div className="lg:col-span-2">
+          <Card title="Avisos recientes">
+            {d.recentAlerts.length === 0 ? (
+              <p className="text-sm text-ink3">Todavía no se envió ningún aviso.</p>
+            ) : (
+              <Paginated pageSize={5} label="avisos" className="text-sm">
+                {d.recentAlerts.map((a) => (
+                  <div
+                    key={a._id}
+                    className="border-b border-line py-2.5 last:border-b-0"
+                  >
+                    <div className="text-xs text-ink3">{formatFechaCorta(a.sentAt)}</div>
+                    <div className="line-clamp-2 text-ink2">{a.payloadPreview}</div>
+                  </div>
+                ))}
+              </Paginated>
             )}
           </Card>
-          <Card title="Honorarios · 4ta">
-            <Row label="Renta neta trabajo" value={formatPen(d.projection4ta.rentaNetaTrabajoCents)} />
-            <Row label="IR anual estimado" value={formatPen(d.projection4ta.irAnualCents)} />
-            <Row
-              label={d.projection4ta.saldoCents >= 0 ? 'Saldo por pagar' : 'Saldo a favor'}
-              value={formatPen(Math.abs(d.projection4ta.saldoCents))}
-              strong
-            />
-          </Card>
         </div>
-      </section>
-
-      {/* DJ Anual */}
-      <AnnualDeadline today={d.today} ra={d.rentaAnual} />
-
-      {/* Alertas */}
-      <Card title="Últimas alertas">
-        {d.recentAlerts.length === 0 ? (
-          <p className="text-sm text-neutral-500">Sin alertas todavía.</p>
-        ) : (
-          <Paginated pageSize={6} label="alertas" className="text-sm">
-            {d.recentAlerts.map((a) => (
-              <div
-                key={a._id}
-                className="flex justify-between gap-3 border-b border-neutral-800/70 py-2 last:border-b-0"
-              >
-                <span className="line-clamp-2 text-neutral-300">{a.payloadPreview}</span>
-                <span className="shrink-0 text-xs text-neutral-500">{formatFecha(a.sentAt)}</span>
-              </div>
-            ))}
-          </Paginated>
-        )}
-      </Card>
-    </div>
+      </div>
+    </>
   );
 }
 
-function HeroDeadline({
+function NextPayment({
   today,
   nextDue,
 }: {
   today: string;
   nextDue: NonNullable<Dashboard['nextDue']>;
 }) {
-  const days = daysBetween(today, nextDue.dueDate);
+  const days = diasHasta(today, nextDue.dueDate);
   const tone = urgencyTone(days);
-  const accent =
-    tone === 'urgent' ? 'text-red-400' : tone === 'warn' ? 'text-amber-400' : 'text-emerald-400';
+  const accent = tone === 'urgent' ? 'text-bad' : tone === 'warn' ? 'text-warn' : 'text-ok';
   const s = nextDue.summary;
-  const totalF621 = s ? s.npsEstimadoCents : 0;
 
   return (
-    <Card tone={tone} action={<Chip>{nextDue.source}</Chip>} title="Próximo vencimiento">
-      <div className="flex items-end justify-between gap-3">
+    <Card tone={tone}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="text-sm font-medium text-ink2">Próximo pago a SUNAT</div>
+        <Chip>{nextDue.source}</Chip>
+      </div>
+      <div className="mt-4 grid gap-5 sm:grid-cols-2 sm:items-end">
         <div>
-          <div className={`text-3xl font-bold ${accent}`}>{daysLabel(days)}</div>
-          <div className="mt-1 text-sm text-neutral-400">
-            F.621{s && s.pago616Cents > 0 ? ' + F.616' : ''} · periodo {nextDue.period}
+          <div className={`text-3xl font-bold tracking-tight ${accent}`}>{diasLabel(days)}</div>
+          <div className="mt-1 text-sm text-ink2">
+            Declaración de {formatPeriodo(nextDue.period)}
           </div>
-          <div className="text-sm text-neutral-400">vence {formatFecha(nextDue.dueDate)}</div>
-          <div className="text-xs text-emerald-500/80">
-            💡 pagar antes del {formatFecha(suggestedPayDate(nextDue.dueDate))}
-          </div>
+          <div className="text-sm text-ink3">Vence el {formatFechaCorta(nextDue.dueDate)}</div>
         </div>
-        <div className="text-right">
-          <div className="text-[11px] uppercase tracking-wide text-neutral-500">A pagar (NPS)</div>
-          <div className="text-2xl font-semibold tabular-nums">{formatPen(totalF621)}</div>
+        <div className="sm:text-right">
+          <div className="text-xs text-ink3">Monto a pagar</div>
+          <div className="text-3xl font-semibold tabular-nums text-ink">
+            {formatPen(s ? s.npsEstimadoCents : 0)}
+          </div>
           {s && s.pago616Cents > 0 && (
-            <div className="text-xs text-neutral-400">+ {formatPen(s.pago616Cents)} F.616</div>
+            <div className="text-xs text-ink3">+ {formatPen(s.pago616Cents)} de honorarios</div>
           )}
         </div>
       </div>
-      <div className="mt-4">
-        <DeclareButton period={nextDue.period} />
+      <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-line pt-4">
+        <PrimaryLink href={`/periodos/${nextDue.period}`}>Ver pasos y declarar →</PrimaryLink>
+        <span className="text-sm text-ink2">
+          Conviene pagar antes del{' '}
+          <b className="text-ink">{formatFechaCorta(suggestedPayDate(nextDue.dueDate))}</b>
+        </span>
       </div>
     </Card>
   );
 }
 
-function AnnualDeadline({
-  today,
-  ra,
-}: {
-  today: string;
-  ra: Dashboard['rentaAnual'];
-}) {
-  const days = daysBetween(today, ra.dueDate);
+function Pending({ d }: { d: Dashboard }) {
+  const annualDays = diasHasta(d.today, d.rentaAnual.dueDate);
+  const items: { key: string; href: string; title: string; sub: string; chip?: string }[] = [
+    ...d.detracciones.map((x) => ({
+      key: x.id,
+      href: '/comprobantes',
+      title: `Confirmar depósito de detracción · ${formatPen(x.amountCents)}`,
+      sub: x.depositDueDate
+        ? `Plazo ${formatFechaCorta(x.depositDueDate)} · ${formatPeriodo(x.period)}`
+        : formatPeriodo(x.period),
+      chip: x.status,
+    })),
+    {
+      key: 'anual',
+      href: '/calendario',
+      title: `Declaración anual de renta ${d.rentaAnual.ejercicio}`,
+      sub: `${formatFechaCorta(d.rentaAnual.dueDate)} · ${diasLabel(annualDays)}`,
+    },
+  ];
+
   return (
-    <Card title="Declaración Jurada Anual" action={<Chip>{ra.source}</Chip>}>
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="text-lg font-semibold">Ejercicio {ra.ejercicio}</div>
-          <div className="text-sm text-neutral-400">{formatFecha(ra.dueDate)}</div>
-        </div>
-        <div className="text-right text-sm text-neutral-400">{daysLabel(days)}</div>
-      </div>
-      <p className="mt-2 text-xs text-neutral-500">
-        Cronograma MYPE/PN. Regulariza el IR de 3ra y 4ta (ver proyección arriba).
+    <Card title="Pendientes">
+      <ul className="-mx-2 divide-y divide-line">
+        {items.map((it) => (
+          <li key={it.key}>
+            <Link
+              href={it.href}
+              className="group flex items-center justify-between gap-3 rounded-lg px-2 py-3 hover:bg-page"
+            >
+              <span className="min-w-0">
+                <span className="block text-sm font-medium text-ink">{it.title}</span>
+                <span className="block text-xs text-ink3">{it.sub}</span>
+              </span>
+              <span className="flex shrink-0 items-center gap-2">
+                {it.chip && <Chip>{it.chip}</Chip>}
+                <span aria-hidden className="text-ink3 group-hover:text-brand">
+                  ›
+                </span>
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+      {d.detracciones.length > 0 && (
+        <p className="mt-2 text-xs leading-relaxed text-ink3">
+          La detracción es una parte de tu factura que el cliente deposita en tu cuenta del Banco
+          de la Nación. Pídele la constancia y regístrala en Ventas.
+        </p>
+      )}
+    </Card>
+  );
+}
+
+function Projection({ d }: { d: Dashboard }) {
+  const p3 = d.projection;
+  const p4 = d.projection4ta;
+  const rows: { label: string; a: string; b: string; strong?: boolean }[] = [
+    { label: 'Ganancia del año', a: formatPen(p3.rentaNetaCents), b: formatPen(p4.rentaNetaTrabajoCents) },
+    { label: 'Impuesto del año', a: formatPen(p3.irEstimadoCents), b: formatPen(p4.irAnualCents) },
+    {
+      label: p4.saldoCents < 0 ? 'Al final pagarías / te devuelven' : 'Al final pagarías',
+      a: formatPen(p3.regularizacionEstimadaCents),
+      b: p4.saldoCents < 0 ? `${formatPen(-p4.saldoCents)} a favor` : formatPen(p4.saldoCents),
+      strong: true,
+    },
+  ];
+  return (
+    <Card title="Impuesto a la renta del año (proyección)">
+      <p className="-mt-1 mb-3 text-xs text-ink3">
+        Estimado con lo registrado hasta hoy. Se ajusta una sola vez, en la declaración anual.
       </p>
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="text-left text-xs text-ink3">
+            <th className="pb-2 font-medium" />
+            <th className="pb-2 text-right font-medium">Negocio (facturas)</th>
+            <th className="pb-2 text-right font-medium">Honorarios (recibos)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr key={r.label} className="border-t border-line">
+              <td className={`py-2.5 pr-2 ${r.strong ? 'font-semibold text-ink' : 'text-ink2'}`}>
+                {r.label}
+              </td>
+              <td className={`py-2.5 text-right tabular-nums ${r.strong ? 'font-semibold' : ''}`}>
+                {r.a}
+              </td>
+              <td className={`py-2.5 text-right tabular-nums ${r.strong ? 'font-semibold' : ''}`}>
+                {r.b}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {p3.gastosFaltantesParaTramo10Cents > 0 && (
+        <p className="mt-3 rounded-lg bg-info-soft p-3 text-xs leading-relaxed text-info">
+          Con {formatPen(p3.gastosFaltantesParaTramo10Cents)} más en compras deducibles, tu negocio
+          pagaría la tasa baja (10%).
+        </p>
+      )}
     </Card>
   );
 }

@@ -4,7 +4,8 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { toCents } from '@tributo/core';
 import { mutate } from '@/lib/mutate';
-import { Card, Field, inputCls } from '@/components/ui';
+import { useDrawerClose } from '@/components/drawer';
+import { Field, inputCls } from '@/components/ui';
 
 const CATEGORIES: Record<string, string> = {
   EQUIPO: 'Equipo',
@@ -18,6 +19,7 @@ const CATEGORIES: Record<string, string> = {
 
 export function CompraForm() {
   const router = useRouter();
+  const closeDrawer = useDrawerClose();
   const [form, setForm] = useState({
     issueDate: new Date().toISOString().slice(0, 10),
     supplierName: '',
@@ -62,6 +64,7 @@ export function CompraForm() {
         notes: '',
       }));
       router.refresh();
+      closeDrawer();
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Error');
     } finally {
@@ -70,7 +73,7 @@ export function CompraForm() {
   }
 
   return (
-    <Card title="Nueva compra">
+    <div>
       <div className="grid grid-cols-2 gap-3">
         <Field label="Fecha de emisión">
           <input type="date" value={form.issueDate} onChange={(e) => set('issueDate', e.target.value)} className={inputCls} />
@@ -116,19 +119,19 @@ export function CompraForm() {
             className={`${inputCls} resize-none`}
           />
         </Field>
-        <label className="col-span-2 flex items-center gap-2 rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-300">
+        <label className="col-span-2 flex items-center gap-2 rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink2">
           <input type="checkbox" checked={form.bancarizado} onChange={(e) => set('bancarizado', e.target.checked)} />
           Pagado por medio bancario (obligatorio si supera S/ 2,000)
         </label>
       </div>
-      {err && <p className="mt-2 text-sm text-red-400">{err}</p>}
+      {err && <p className="mt-2 text-sm text-bad">{err}</p>}
       <button
         onClick={submit}
         disabled={busy || !form.supplierRuc || !form.baseSoles}
-        className="mt-3 w-full rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
+        className="mt-3 w-full rounded-lg bg-brand px-3 py-2 text-sm font-medium text-white hover:bg-brand-hover disabled:opacity-50"
       >
         {busy ? 'Guardando…' : 'Registrar compra'}
       </button>
-    </Card>
+    </div>
   );
 }
