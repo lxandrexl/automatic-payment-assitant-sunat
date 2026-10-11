@@ -40,6 +40,10 @@ export default async function PeriodoDetalle({ params }: { params: { id: string 
   const recibos = p.invoices.filter((x) => x.kind === 'RXH');
   const retenido = recibos.reduce((a, x) => a + (x.retencion?.amountCents ?? 0), 0);
   const adelanto8 = Math.round(s.rxhBrutoCents * settings.retencion4taRate);
+  // Lo que el cliente del exterior retiene en SU país (ej. Chile): reduce lo que llega al banco,
+  // pero no es retención peruana y no reduce el F.616.
+  const extUsd = recibos.reduce((a, x) => a + (x.foreign?.withholdingCents ?? 0), 0);
+  const extPen = recibos.reduce((a, x) => a + (x.foreign ? Math.round(x.foreign.withholdingCents * x.foreign.exchangeRate) : 0), 0);
   // Cada formulario se paga por separado: lo pendiente es lo que aún no tiene pago registrado.
   const pend621 = p.f621Payment ? 0 : s.npsEstimadoCents;
   const pend616 = p.f616Payment ? 0 : s.pago616Cents;
@@ -207,8 +211,15 @@ export default async function PeriodoDetalle({ params }: { params: { id: string 
               <dl className="text-sm">
                 <Line label="Recibos emitidos este mes (bruto)" value={formatPen(s.rxhBrutoCents)} muted />
                 <Line label={`Adelanto de renta (${Math.round(settings.retencion4taRate * 100)}% del bruto)`} value={formatPen(adelanto8)} total />
-                <Line label="Ya retenido por tus clientes" value={formatPen(retenido)} sign="−" />
+                <Line label="Retención peruana ya hecha por tus clientes (a SUNAT)" value={formatPen(retenido)} sign="−" />
                 <Line label="Pagas tú (F.616)" value={formatPen(s.pago616Cents)} final />
+                {extUsd > 0 && (
+                  <div className="mt-3 rounded-lg bg-hono-soft p-3 text-xs leading-relaxed text-hono">
+                    <b>Aparte, retención en el exterior: {formatUsd(extUsd)} ≈ {formatPen(extPen)}.</b> Tu cliente
+                    la retiene en su país: reduce lo que llega a tu banco, pero en Perú sigues declarando el
+                    bruto completo, por eso no baja este pago.
+                  </div>
+                )}
               </dl>
             )}
             {(s.rxhBrutoCents > 0 || p.f616Payment) && (

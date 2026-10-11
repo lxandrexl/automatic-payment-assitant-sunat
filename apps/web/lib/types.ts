@@ -58,7 +58,14 @@ export interface Invoice {
   detraccion: Detraccion | null;
   retencion: { amountCents: number } | null;
   /** RxH cobrado en moneda extranjera (montos en céntimos de esa moneda; baseCents va en soles). */
-  foreign?: { currency: 'USD'; grossCents: number; exchangeRate: number; withholdingCents: number } | null;
+  foreign?: {
+    currency: 'USD';
+    grossCents: number;
+    exchangeRate: number;
+    withholdingCents: number;
+    /** De dónde salió el tipo de cambio (SUNAT, días promediados) o MANUAL. */
+    rateInfo?: { source: string; kind: 'venta' | 'compra'; dates: string[]; values: number[]; provisional: boolean } | null;
+  } | null;
   status: 'ISSUED' | 'PAID' | 'VOIDED';
 }
 

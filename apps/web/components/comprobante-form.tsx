@@ -7,6 +7,7 @@ import { formatPen, formatUsd } from '@/lib/format';
 import { mutate } from '@/lib/mutate';
 import { useDrawerClose } from '@/components/drawer';
 import type { Client } from '@/lib/types';
+import { FxRate, type RateInfo } from '@/components/fx-rate';
 import { Field, inputCls, Row } from '@/components/ui';
 
 interface Props {
@@ -26,14 +27,14 @@ export function ComprobanteForm(props: Props) {
   const [number, setNumber] = useState('');
   const [issueDate, setIssueDate] = useState(new Date().toISOString().slice(0, 10));
   const [baseSoles, setBaseSoles] = useState('9000');
-  const [tc, setTc] = useState('');
+  const [tcNum, setTcNum] = useState(0);
+  const [rateInfo, setRateInfo] = useState<RateInfo | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
   const selectedClient = props.clients.find((c) => c._id === clientId);
   // RxH a un cliente que paga en dólares: se ingresa en US$ + tipo de cambio.
   const enDolares = kind === 'RXH' && selectedClient?.currency === 'USD';
-  const tcNum = Number(tc) || 0;
   const montoCents = toCents(Number(baseSoles) || 0); // en la moneda ingresada (S/ o US$)
   const ext = enDolares
     ? computeRxhExterior(montoCents, tcNum, selectedClient?.retencionExteriorRate ?? 0)
@@ -64,7 +65,7 @@ export function ComprobanteForm(props: Props) {
         number,
         issueDate,
         baseCents,
-        ...(enDolares ? { foreignGrossCents: montoCents, exchangeRate: tcNum } : {}),
+        ...(enDolares ? { foreignGrossCents: montoCents, exchangeRate: tcNum, rateInfo } : {}),
       });
       setNumber('');
       router.refresh();
@@ -109,18 +110,13 @@ export function ComprobanteForm(props: Props) {
         </Field>
         {enDolares && (
           <Field label="Tipo de cambio (S/ por US$)" full>
-            <input
-              type="number"
-              step="0.001"
-              value={tc}
-              onChange={(e) => setTc(e.target.value)}
-              placeholder="Ej. 3.430"
-              className={inputCls}
+            <FxRate
+              period={issueDate.slice(0, 7)}
+              onChange={(rate, info) => {
+                setTcNum(rate);
+                setRateInfo(info);
+              }}
             />
-            <span className="mt-1 block text-xs text-ink3">
-              El de SUNAT (SBS, venta) del día de emisión; con él conviertes los dólares a soles para
-              declarar.
-            </span>
           </Field>
         )}
       </div>

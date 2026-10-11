@@ -13,7 +13,13 @@ import {
 import { Invoice, InvoiceDocument } from '../schemas/invoice.schema';
 import { PeriodsService } from '../periods/periods.service';
 import { SettingsService } from '../settings/settings.service';
-import { CreateInvoiceDto, DetraccionDepositDto, UpdateInvoiceDto } from './invoices.dto';
+import {
+  CompleteForeignDto,
+  CreateInvoiceDto,
+  DetraccionDepositDto,
+  type RateInfoDto,
+  UpdateInvoiceDto,
+} from './invoices.dto';
 
 @Injectable()
 export class InvoicesService {
@@ -68,19 +74,13 @@ export class InvoicesService {
 
     // Cobro en moneda extranjera: el impuesto en Perú va sobre el BRUTO convertido;
     // lo que el cliente retiene en su país solo reduce lo que llega al banco.
-    let foreign: { currency: 'USD'; grossCents: number; exchangeRate: number; withholdingCents: number } | null =
-      null;
+    let foreign: ReturnType<typeof buildForeign>['foreign'] | null = null;
     let baseCents = dto.baseCents;
     if (dto.foreignGrossCents != null) {
       if (!dto.exchangeRate) throw new BadRequestException('Falta el tipo de cambio');
-      const x = computeRxhExterior(dto.foreignGrossCents, dto.exchangeRate, client?.retencionExteriorRate ?? 0);
-      baseCents = x.baseCents;
-      foreign = {
-        currency: 'USD',
-        grossCents: dto.foreignGrossCents,
-        exchangeRate: dto.exchangeRate,
-        withholdingCents: x.retencionExteriorFxCents,
-      };
+      const f = buildForeign(dto.foreignGrossCents, dto.exchangeRate, client?.retencionExteriorRate ?? 0, dto.rateInfo);
+      baseCents = f.baseCents;
+      foreign = f.foreign;
     }
 
     const r = computeRxh(baseCents, s, pagadorRetiene);
@@ -93,6 +93,25 @@ export class InvoicesService {
       retencion: { amountCents: r.retencionCents },
       foreign,
     });
+  }
+
+  /**
+   * Completa un RxH que quedó registrado solo en soles: agrega el bruto en dólares, el tipo de
+   * cambio usado y la retención del exterior; recalcula la base en soles (lo que se declara).
+   */
+  async completeForeign(id: string, dto: CompleteForeignDto): Promise<InvoiceDocument> {
+    const doc = await this.byId(id);
+    if (doc.kind !== 'RXH') throw new BadRequestException('Solo un recibo por honorarios puede estar en dólares');
+    if (doc.status !== 'ISSUED') throw new BadRequestException(`El comprobante está ${doc.status}`);
+    const s = await this.settings.calcSettings();
+    const settingsDoc = await this.settings.get();
+    const client = settingsDoc.clients.find((c) => c._id.equals(doc.clientId));
+    const f = buildForeign(dto.foreignGrossCents, dto.exchangeRate, client?.retencionExteriorRate ?? 0, dto.rateInfo);
+    doc.baseCents = f.baseCents;
+    doc.totalCents = f.baseCents;
+    doc.retencion = { amountCents: computeRxh(f.baseCents, s, client?.domiciliado !== false).retencionCents };
+    doc.foreign = f.foreign;
+    return doc.save();
   }
 
   async update(id: string, dto: UpdateInvoiceDto): Promise<InvoiceDocument> {
@@ -146,4 +165,27 @@ export class InvoicesService {
     if (!doc) throw new NotFoundException(`Comprobante ${id} no existe`);
     return doc;
   }
+}
+
+/** RxH en moneda extranjera: base en soles (se declara) + datos en USD con el tipo de cambio usado. */
+function buildForeign(grossCents: number, exchangeRate: number, retencionExteriorRate: number, rateInfo?: RateInfoDto) {
+  const x = computeRxhExterior(grossCents, exchangeRate, retencionExteriorRate);
+  return {
+    baseCents: x.baseCents,
+    foreign: {
+      currency: 'USD' as const,
+      grossCents,
+      exchangeRate,
+      withholdingCents: x.retencionExteriorFxCents,
+      rateInfo: rateInfo
+        ? {
+            source: rateInfo.source,
+            kind: rateInfo.kind ?? 'venta',
+            dates: rateInfo.dates,
+            values: rateInfo.values,
+            provisional: rateInfo.provisional ?? false,
+          }
+        : { source: 'MANUAL', kind: 'venta' as const, dates: [], values: [], provisional: false },
+    },
+  };
 }

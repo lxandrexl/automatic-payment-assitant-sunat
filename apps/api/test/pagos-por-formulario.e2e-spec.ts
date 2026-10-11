@@ -134,4 +134,51 @@ describe('RxH en dólares y pago separado de F.621 / F.616', () => {
       api().post('/api/v1/periods/2026-09/payments/f999').send({ paidAt: '2026-10-10', amountCents: 1 }),
     ).expect(400);
   });
+
+  it('tipo de cambio: promedio de los 3 últimos días hábiles del mes (SUNAT), con caché', async () => {
+    const venta: Record<string, number> = { '2026-09-28': 3.42, '2026-09-29': 3.43, '2026-09-30': 3.44 };
+    const spy = jest.spyOn(global, 'fetch').mockImplementation(async (url) => {
+      const fecha = new URL(String(url)).searchParams.get('fecha')!;
+      return new Response(JSON.stringify({ fecha, compra: venta[fecha] - 0.01, venta: venta[fecha] }), { status: 200 });
+    });
+    try {
+      const res = await api().get('/api/v1/fx/usd?period=2026-09').expect(200);
+      expect(res.body.days.map((d: { date: string }) => d.date)).toEqual(['2026-09-28', '2026-09-29', '2026-09-30']);
+      expect(res.body).toMatchObject({ kind: 'venta', rate: 3.43, provisional: false });
+      expect(spy).toHaveBeenCalledTimes(3);
+      // Segunda consulta: sale de la caché, no vuelve a pedir nada.
+      await api().get('/api/v1/fx/usd?period=2026-09').expect(200);
+      expect(spy).toHaveBeenCalledTimes(3);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it('si SUNAT no responde, avisa para ingresar el tipo de cambio a mano (503)', async () => {
+    const spy = jest.spyOn(global, 'fetch').mockRejectedValue(new Error('network down'));
+    try {
+      await api().get('/api/v1/fx/usd?period=2026-08').expect(503);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it('completa un RxH que quedó en soles: agrega USD, tipo de cambio y de dónde salió', async () => {
+    const created = await auth(
+      api().post('/api/v1/invoices').send({
+        kind: 'RXH', clientId: jordanId, series: 'E001', number: '22',
+        issueDate: '2026-08-25', baseCents: 1327000, // registrado antes, solo en soles
+      }),
+    ).expect(201);
+    const res = await auth(
+      api().patch(`/api/v1/invoices/${created.body._id}/foreign`).send({
+        foreignGrossCents: 386667,
+        exchangeRate: 3.431,
+        rateInfo: { source: 'SUNAT (vía apis.net.pe)', kind: 'venta', dates: ['2026-08-27', '2026-08-28', '2026-08-31'], values: [3.43, 3.431, 3.432] },
+      }),
+    ).expect(200);
+    expect(res.body.baseCents).toBe(Math.round(386667 * 3.431));
+    expect(res.body.foreign).toMatchObject({ grossCents: 386667, withholdingCents: 38667 });
+    expect(res.body.foreign.rateInfo).toMatchObject({ source: 'SUNAT (vía apis.net.pe)', dates: ['2026-08-27', '2026-08-28', '2026-08-31'] });
+  });
 });

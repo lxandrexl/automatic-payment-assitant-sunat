@@ -3,6 +3,7 @@ import {
   addDays,
   businessDaysUntil,
   isBusinessDay,
+  lastBusinessDaysOfMonth,
   nextBusinessDayFrom,
   nthBusinessDayOfMonth,
 } from '../src/habiles';
@@ -43,5 +44,17 @@ describe('días hábiles', () => {
     // 27 lun → 30 jue: 28 y 29 feriados, 30 hábil = 1
     expect(businessDaysUntil('2026-07-27', '2026-07-30')).toBe(1);
     expect(businessDaysUntil('2026-07-30', '2026-07-27')).toBe(0); // target en el pasado
+  });
+});
+
+describe('lastBusinessDaysOfMonth', () => {
+  it('setiembre 2026 termina en miércoles: lun 28, mar 29, mié 30', () => {
+    expect(lastBusinessDaysOfMonth('2026-09', 3)).toEqual(['2026-09-28', '2026-09-29', '2026-09-30']);
+  });
+  it('salta fin de semana: agosto 2026 termina en lunes → jue 27, vie 28... lun 31', () => {
+    expect(lastBusinessDaysOfMonth('2026-08', 3)).toEqual(['2026-08-27', '2026-08-28', '2026-08-31']);
+  });
+  it('mes en curso: no pasa de la fecha tope', () => {
+    expect(lastBusinessDaysOfMonth('2026-10', 3, '2026-10-12')).toEqual(['2026-10-07', '2026-10-09', '2026-10-12']);
   });
 });

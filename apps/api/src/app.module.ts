@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { loadConfig } from './config';
+import { FxModule } from './fx/fx.module';
 import { HealthController } from './health.controller';
 import { AlertsModule } from './alerts/alerts.module';
 import { DashboardModule } from './dashboard/dashboard.module';
@@ -22,6 +23,7 @@ import { SettingsModule } from './settings/settings.module';
     DashboardModule,
     NotifyModule,
     IncomeModule,
+    FxModule,
   ],
   controllers: [HealthController],
 })

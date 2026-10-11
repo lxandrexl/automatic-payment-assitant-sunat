@@ -61,3 +61,21 @@ export function businessDaysUntil(todayIso: string, targetIso: string): number {
   }
   return count;
 }
+
+/**
+ * Los últimos `n` días hábiles (lun–vie, sin feriados) del mes `period` ("YYYY-MM"),
+ * del más antiguo al más reciente. Si `upToIso` cae dentro del mes, no pasa de esa fecha
+ * (mes en curso: solo hay tipo de cambio publicado hasta hoy).
+ */
+export function lastBusinessDaysOfMonth(period: string, n: number, upToIso?: string): string[] {
+  const [y = 0, m = 1] = period.split('-').map(Number);
+  const lastDay = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  let d = `${period}-${String(lastDay).padStart(2, '0')}`;
+  if (upToIso && upToIso < d) d = upToIso;
+  const out: string[] = [];
+  while (out.length < n && d.slice(0, 7) === period) {
+    if (isBusinessDay(d)) out.unshift(d);
+    d = addDays(d, -1);
+  }
+  return out;
+}
