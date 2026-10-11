@@ -51,6 +51,8 @@ describe('cronograma F.621', () => {
     expect(suggestedPayDate('2026-08-18')).toBe('2026-08-14');
     // Con feriado de por medio: vence lun 16/11/2026 → 13 vie (1), 12 jue (2)
     expect(suggestedPayDate('2026-11-16')).toBe('2026-11-12');
+    // La API devuelve las fechas con hora: debe dar lo mismo que la fecha sola.
+    expect(suggestedPayDate('2026-10-15T05:00:00.000Z')).toBe(suggestedPayDate('2026-10-15'));
   });
 
   it('depositDueDate: 5.º hábil del mes siguiente a la emisión', () => {

@@ -64,7 +64,8 @@ export function getDueDate(period: string, digit: number): { date: string; sourc
  * si hay saturación del portal, temas del banco, o falta depositar la detracción).
  */
 export function suggestedPayDate(dueDateIso: string, businessDaysBefore = 2): string {
-  return subtractBusinessDays(dueDateIso, businessDaysBefore);
+  // Acepta también un timestamp ISO completo (la API devuelve las fechas con hora).
+  return subtractBusinessDays(dueDateIso.slice(0, 10), businessDaysBefore);
 }
 
 /** Fecha límite del depósito de detracción: 5.º día hábil del mes siguiente a la emisión (SPEC §4.3). */
