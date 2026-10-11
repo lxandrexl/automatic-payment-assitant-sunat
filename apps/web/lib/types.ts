@@ -41,6 +41,7 @@ export interface Detraccion {
   depositDueDate: string;
   depositedAt: string | null;
   constanciaNumber: string | null;
+  reference?: string;
   status: 'PENDING' | 'DEPOSITED' | 'OVERDUE';
 }
 

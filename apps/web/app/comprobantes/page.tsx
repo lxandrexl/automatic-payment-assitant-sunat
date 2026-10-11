@@ -200,12 +200,14 @@ export default async function VentasPage({
                             <p className="text-xs leading-relaxed text-ink3">
                               Esto es solo la detracción (el 12% que va al Banco de la Nación), no el cobro de la
                               factura. Si ya se depositó, por ejemplo porque ya la usaste para pagar tu F.621,
-                              regístrala con su constancia para que deje de figurar pendiente.
+                              regístrala (el número de constancia es opcional) para que deje de figurar pendiente.
                             </p>
                           )}
                           {i.detraccion.status === 'DEPOSITED' ? (
                             <p className="text-ok">
-                              Depositada · constancia {i.detraccion.constanciaNumber ?? '—'}
+                              Depositada
+                              {i.detraccion.constanciaNumber && ` · constancia ${i.detraccion.constanciaNumber}`}
+                              {i.detraccion.reference && ` · ${i.detraccion.reference}`}
                             </p>
                           ) : (
                             <DetraccionDeposit invoiceId={i._id} expectedCents={i.detraccion.amountCents} />

@@ -9,6 +9,8 @@ export class Detraccion {
   @Prop({ required: true }) depositDueDate!: Date;
   @Prop({ type: Date, default: null }) depositedAt!: Date | null;
   @Prop({ type: String, default: null }) constanciaNumber!: string | null;
+  // Referencia libre cuando no se tiene la constancia (p. ej. "usado en F.621 202608, orden …").
+  @Prop({ default: '' }) reference!: string;
   @Prop({ default: 'PENDING', enum: ['PENDING', 'DEPOSITED', 'OVERDUE'] })
   status!: 'PENDING' | 'DEPOSITED' | 'OVERDUE';
 }

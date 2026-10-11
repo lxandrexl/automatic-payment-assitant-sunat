@@ -145,7 +145,8 @@ export class InvoicesService {
       );
     }
     doc.detraccion.depositedAt = new Date(dto.depositedAt);
-    doc.detraccion.constanciaNumber = dto.constanciaNumber;
+    doc.detraccion.constanciaNumber = dto.constanciaNumber?.trim() || null;
+    doc.detraccion.reference = dto.reference?.trim() ?? '';
     doc.detraccion.status = 'DEPOSITED';
     return doc.save();
   }

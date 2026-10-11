@@ -47,6 +47,8 @@ export class UpdateInvoiceDto {
 
 export class DetraccionDepositDto {
   @IsString() depositedAt!: string;
-  @IsString() constanciaNumber!: string;
+  // El cliente no siempre entrega el número de constancia: es opcional.
+  @IsOptional() @IsString() constanciaNumber?: string;
+  @IsOptional() @IsString() reference?: string;
   @IsInt() @Min(0) amountCents!: number;
 }

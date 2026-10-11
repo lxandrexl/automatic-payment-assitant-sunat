@@ -181,4 +181,26 @@ describe('RxH en dólares y pago separado de F.621 / F.616', () => {
     expect(res.body.foreign).toMatchObject({ grossCents: 386667, withholdingCents: 38667 });
     expect(res.body.foreign.rateInfo).toMatchObject({ source: 'SUNAT (vía apis.net.pe)', dates: ['2026-08-27', '2026-08-28', '2026-08-31'] });
   });
+
+  it('registra un depósito de detracción sin número de constancia, solo con referencia', async () => {
+    const f = await auth(
+      api().post('/api/v1/invoices').send({
+        kind: 'FACTURA', clientId: metricaId, series: 'E001', number: '2',
+        issueDate: '2026-08-26', baseCents: 900000,
+      }),
+    ).expect(201);
+    expect(f.body.detraccion.amountCents).toBe(127400);
+    const res = await auth(
+      api().post(`/api/v1/invoices/${f.body._id}/detraccion-deposit`).send({
+        depositedAt: '2026-09-07',
+        amountCents: 127400,
+        reference: 'usado en F.621 202608, orden 1206186370',
+      }),
+    ).expect(201);
+    expect(res.body.detraccion).toMatchObject({
+      status: 'DEPOSITED',
+      constanciaNumber: null,
+      reference: 'usado en F.621 202608, orden 1206186370',
+    });
+  });
 });

@@ -18,6 +18,7 @@ export function DetraccionDeposit({
   const [open, setOpen] = useState(false);
   const [depositedAt, setDepositedAt] = useState(() => new Date().toISOString().slice(0, 10));
   const [constanciaNumber, setConstanciaNumber] = useState('');
+  const [reference, setReference] = useState('');
   const [montoSoles, setMontoSoles] = useState(String((expectedCents / 100).toFixed(2)));
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -34,7 +35,8 @@ export function DetraccionDeposit({
     try {
       await mutate(`/invoices/${invoiceId}/detraccion-deposit`, 'POST', {
         depositedAt,
-        constanciaNumber,
+        ...(constanciaNumber.trim() ? { constanciaNumber: constanciaNumber.trim() } : {}),
+        ...(reference.trim() ? { reference: reference.trim() } : {}),
         amountCents: toCents(Number(montoSoles)),
       });
       setOpen(false);
@@ -70,7 +72,7 @@ export function DetraccionDeposit({
             </p>
 
             <div className="mt-4 space-y-3">
-              <Field label="Fecha del depósito">
+              <Field label="Fecha del depósito (aproximada si no la sabes)">
                 <input
                   type="date"
                   value={depositedAt}
@@ -78,13 +80,25 @@ export function DetraccionDeposit({
                   className={inputCls}
                 />
               </Field>
-              <Field label="N° de constancia">
+              <Field label="N° de constancia (opcional)">
                 <input
                   value={constanciaNumber}
                   onChange={(e) => setConstanciaNumber(e.target.value)}
-                  placeholder="de la constancia del Banco de la Nación"
+                  placeholder="Si tu cliente te lo dio"
                   className={inputCls}
                 />
+              </Field>
+              <Field label="Referencia (opcional)">
+                <input
+                  value={reference}
+                  onChange={(e) => setReference(e.target.value)}
+                  placeholder="Ej. usado en F.621 202608, orden 1206186370"
+                  className={inputCls}
+                />
+                <span className="mt-1 block text-xs text-ink3">
+                  Si no tienes la constancia, anota cómo sabes que se depositó (saldo en el banco, uso en una
+                  declaración, correo del contador).
+                </span>
               </Field>
               <Field label="Monto depositado (S/)">
                 <input
@@ -109,7 +123,7 @@ export function DetraccionDeposit({
               </button>
               <button
                 onClick={submit}
-                disabled={busy || !constanciaNumber || !montoSoles}
+                disabled={busy || !montoSoles}
                 className="flex-1 rounded-lg bg-brand px-3 py-2 text-sm font-medium text-white hover:bg-brand-hover disabled:opacity-50"
               >
                 {busy ? 'Guardando…' : 'Confirmar depósito'}
