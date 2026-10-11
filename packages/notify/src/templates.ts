@@ -15,10 +15,21 @@ export interface DueReminderData {
   npsEstimadoCents: number;
   /** Pago a cuenta de 4ta del mes (F.616, mismo vencimiento). 0 = no aplica. */
   pago616Cents?: number;
+  /** El F.621 ya se pagó: el recordatorio solo habla del F.616 pendiente. */
+  f621Pagado?: boolean;
 }
 
 export function dueReminderMsg(d: DueReminderData): string {
   const cuando = d.daysBefore === 0 ? '🔴 VENCE HOY' : `⏰ Faltan ${d.daysBefore} día(s)`;
+  if (d.f621Pagado) {
+    const solo =
+      `${cuando} — Declaración F.616 periodo ${d.period}
+` +
+      `Vencimiento: ${formatFechaLima(d.dueDateIso)}
+` +
+      `F.616 (4ta, RxH sin retención): ${formatPen(d.pago616Cents ?? 0)}`;
+    return d.estimated ? solo + ESTIMATED_SUFFIX : solo;
+  }
   const declaraciones = d.pago616Cents ? 'F.621 + F.616' : 'F.621';
   let base =
     `${cuando} — Declaración ${declaraciones} periodo ${d.period}\n` +

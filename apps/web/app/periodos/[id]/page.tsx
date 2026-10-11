@@ -11,7 +11,7 @@ import {
 } from '@/lib/format';
 import type { Invoice, Period, PeriodSummary, Purchase, Settings } from '@/lib/types';
 import { Card, Chip, Explain, KindTag, MoreLink, PageHeader } from '@/components/ui';
-import { DeclareButton } from '@/components/declare-button';
+import { FormPaymentBox } from '@/components/form-payment';
 
 export const dynamic = 'force-dynamic';
 
@@ -40,6 +40,16 @@ export default async function PeriodoDetalle({ params }: { params: { id: string 
   const recibos = p.invoices.filter((x) => x.kind === 'RXH');
   const retenido = recibos.reduce((a, x) => a + (x.retencion?.amountCents ?? 0), 0);
   const adelanto8 = Math.round(s.rxhBrutoCents * settings.retencion4taRate);
+  // Lo que el cliente del exterior retiene en SU país (ej. Chile): reduce lo que llega al banco,
+  // pero no es retención peruana y no reduce el F.616.
+  const extUsd = recibos.reduce((a, x) => a + (x.foreign?.withholdingCents ?? 0), 0);
+  const extPen = recibos.reduce((a, x) => a + (x.foreign ? Math.round(x.foreign.withholdingCents * x.foreign.exchangeRate) : 0), 0);
+  // Cada formulario se paga por separado: lo pendiente es lo que aún no tiene pago registrado.
+  const pend621 = p.f621Payment ? 0 : s.npsEstimadoCents;
+  const pend616 = p.f616Payment ? 0 : s.pago616Cents;
+  const faltaPagar = pend621 + pend616;
+  const falta621 = !p.f621Payment && p.status !== 'PAID';
+  const falta616 = !p.f616Payment && s.pago616Cents > 0 && p.status !== 'PAID';
   const totalSunat = s.npsEstimadoCents + s.pago616Cents;
 
   return (
@@ -71,14 +81,16 @@ export default async function PeriodoDetalle({ params }: { params: { id: string 
           tag={<KindTag kind="FACTURA" />}
           title="Declaración F.621"
           value={formatPen(s.npsEstimadoCents)}
-          hint="IGV + adelanto de renta de tus facturas"
+          hint={p.f621Payment ? `Pagado el ${formatFechaCorta(p.f621Payment.paidAt)}` : 'IGV + adelanto de renta de tus facturas'}
         />
         <Tile
           tag={<KindTag kind="RXH" />}
           title="Declaración F.616"
           value={formatPen(s.pago616Cents)}
           hint={
-            s.pago616Cents > 0
+            p.f616Payment
+              ? `Pagado el ${formatFechaCorta(p.f616Payment.paidAt)}`
+              : s.pago616Cents > 0
               ? 'Adelanto de renta de tus recibos sin retención'
               : s.rxhBrutoCents > 0
                 ? 'Tus clientes ya retuvieron: no pagas nada'
@@ -86,9 +98,9 @@ export default async function PeriodoDetalle({ params }: { params: { id: string 
           }
         />
         <Tile
-          title="Total a pagar a SUNAT"
-          value={formatPen(totalSunat)}
-          hint="Suma de los dos pagos"
+          title="Falta pagar a SUNAT"
+          value={formatPen(faltaPagar)}
+          hint={faltaPagar === 0 ? `Todo pagado (total del mes ${formatPen(totalSunat)})` : `De ${formatPen(totalSunat)} en total este mes`}
           strong
         />
       </div>
@@ -96,32 +108,31 @@ export default async function PeriodoDetalle({ params }: { params: { id: string 
       {/* Qué hacer + fechas */}
       <div className="mt-6 grid gap-6 lg:grid-cols-3 lg:items-start">
         <div className="lg:col-span-2">
-          <Card title={open ? 'Qué hacer' : 'Estado'}>
-            {open ? (
-              <div className="grid gap-6 lg:grid-cols-2">
-                <ol className="space-y-3 text-sm text-ink2">
+          <Card title={falta621 || falta616 ? 'Qué hacer' : 'Estado'}>
+            {falta621 || falta616 ? (
+              <ol className="space-y-3 text-sm text-ink2">
+                {falta621 && (
                   <Step n={1}>
-                    Entra a SUNAT Operaciones en Línea y presenta el <b className="text-ink">F.621</b>{' '}
-                    (negocio) y págalo: <b className="text-ink">{formatPen(s.npsEstimadoCents)}</b>.
+                    Presenta el <b className="text-ink">F.621</b> (negocio) en SUNAT Operaciones en Línea y
+                    págalo: <b className="text-ink">{formatPen(s.npsEstimadoCents)}</b>.
                   </Step>
-                  {s.pago616Cents > 0 && (
-                    <Step n={2}>
-                      Presenta también el <b className="text-ink">F.616</b> (honorarios) y págalo:{' '}
-                      <b className="text-ink">{formatPen(s.pago616Cents)}</b>.
-                    </Step>
-                  )}
-                  <Step n={s.pago616Cents > 0 ? 3 : 2}>
-                    Hazlo antes del{' '}
-                    <b className="text-ink">{formatFechaCorta(suggestedPayDate(p.dueDate))}</b> y márcalo aquí.
+                )}
+                {falta616 && (
+                  <Step n={falta621 ? 2 : 1}>
+                    Presenta el <b className="text-ink">F.616</b> (honorarios) y págalo:{' '}
+                    <b className="text-ink">{formatPen(s.pago616Cents)}</b>.
                   </Step>
-                </ol>
-                <div className="flex items-start lg:justify-end">
-                  <DeclareButton period={p._id} />
-                </div>
-              </div>
+                )}
+                <Step n={(falta621 ? 1 : 0) + (falta616 ? 1 : 0) + 1}>
+                  Hazlo antes del{' '}
+                  <b className="text-ink">{formatFechaCorta(suggestedPayDate(p.dueDate))}</b> y registra cada pago
+                  en su tarjeta, más abajo.
+                </Step>
+              </ol>
             ) : (
               <p className="text-sm text-ink2">
-                Este periodo ya está <b className="text-ink">{p.status === 'PAID' ? 'pagado' : 'declarado'}</b>.
+                Este mes ya está <b className="text-ink">{p.status === 'PAID' ? 'pagado' : 'al día'}</b>: no
+                tienes nada pendiente con SUNAT.
               </p>
             )}
           </Card>
@@ -158,6 +169,7 @@ export default async function PeriodoDetalle({ params }: { params: { id: string 
               <Line label="Detracciones disponibles en el Banco de la Nación" value={formatPen(s.detrDisponibleEstimadaCents)} sign="−" />
               <Line label="Pagas de tu bolsillo (F.621)" value={formatPen(s.npsEstimadoCents)} final />
             </dl>
+            <FormPaymentBox period={p._id} form="f621" expectedCents={s.npsEstimadoCents} payment={p.f621Payment ?? null} />
             <Explain summary="¿Por qué resto las detracciones?">
               <p>
                 El dinero de detracciones que tienes en el Banco de la Nación solo sirve para pagar
@@ -199,9 +211,19 @@ export default async function PeriodoDetalle({ params }: { params: { id: string 
               <dl className="text-sm">
                 <Line label="Recibos emitidos este mes (bruto)" value={formatPen(s.rxhBrutoCents)} muted />
                 <Line label={`Adelanto de renta (${Math.round(settings.retencion4taRate * 100)}% del bruto)`} value={formatPen(adelanto8)} total />
-                <Line label="Ya retenido por tus clientes" value={formatPen(retenido)} sign="−" />
+                <Line label="Retención peruana ya hecha por tus clientes (a SUNAT)" value={formatPen(retenido)} sign="−" />
                 <Line label="Pagas tú (F.616)" value={formatPen(s.pago616Cents)} final />
+                {extUsd > 0 && (
+                  <div className="mt-3 rounded-lg bg-hono-soft p-3 text-xs leading-relaxed text-hono">
+                    <b>Aparte, retención en el exterior: {formatUsd(extUsd)} ≈ {formatPen(extPen)}.</b> Tu cliente
+                    la retiene en su país: reduce lo que llega a tu banco, pero en Perú sigues declarando el
+                    bruto completo, por eso no baja este pago.
+                  </div>
+                )}
               </dl>
+            )}
+            {(s.rxhBrutoCents > 0 || p.f616Payment) && (
+              <FormPaymentBox period={p._id} form="f616" expectedCents={s.pago616Cents} payment={p.f616Payment ?? null} />
             )}
             <Explain summary="¿Cuándo pago yo y cuándo ya lo pagó mi cliente?">
               <p>

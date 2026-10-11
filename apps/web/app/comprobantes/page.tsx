@@ -2,8 +2,9 @@ import Link from 'next/link';
 import { apiGet } from '@/lib/api';
 import { formatFechaCorta, formatPen, formatPeriodo, formatUsd } from '@/lib/format';
 import type { Invoice, Settings } from '@/lib/types';
-import { Card, Chip, KindTag, PageHeader, Segmented, Stat } from '@/components/ui';
+import { Card, DetraccionChip, KindTag, PageHeader, Segmented, Stat } from '@/components/ui';
 import { ComprobanteForm } from '@/components/comprobante-form';
+import { CompletarDolares } from '@/components/completar-dolares';
 import { DetraccionDeposit } from '@/components/detraccion-deposit';
 import { DrawerButton } from '@/components/drawer';
 import { Paginated } from '@/components/paginated';
@@ -26,6 +27,7 @@ export default async function VentasPage({
   ]);
   const invoices = kind ? allInvoices.filter((i) => i.kind === kind) : allInvoices;
   const clientName = new Map(settings.clients.map((c) => [c._id, c.name]));
+  const clientById = new Map(settings.clients.map((c) => [c._id, c]));
   // Retención hecha en el exterior (en soles, referencial): reduce lo que llega al banco, no el impuesto.
   const exterior = (i: Invoice) =>
     i.foreign ? Math.round(i.foreign.withholdingCents * i.foreign.exchangeRate) : 0;
@@ -85,10 +87,10 @@ export default async function VentasPage({
         <Stat label="Emitido" value={formatPen(totalEmitido)} hint={`${invoices.length} comprobantes`} />
         <Stat label="Te llega al banco" value={formatPen(totalBanco)} tone="ok" hint="Sin la detracción ni la retención" />
         <Stat
-          label="Detracciones por confirmar"
+          label="Detracciones por registrar"
           value={String(detrPend)}
           tone={detrPend > 0 ? 'info' : 'neutral'}
-          hint={detrPend > 0 ? 'Pide la constancia a tu cliente' : 'Todo al día'}
+          hint={detrPend > 0 ? 'Anota el depósito con su constancia (si ya se depositó, solo falta registrarlo)' : 'Todo al día'}
         />
       </div>
 
@@ -107,7 +109,7 @@ export default async function VentasPage({
               <span>Tipo</span>
               <span className="text-right">Total</span>
               <span className="text-right">Te llega</span>
-              <span>Detracción</span>
+              <span title="El 12% que tu cliente deposita aparte en tu cuenta del Banco de la Nación">Detracción</span>
               <span />
             </div>
             <Paginated pageSize={10} label="comprobantes" className="" footerClass="!mt-0 px-4 pb-4">
@@ -139,7 +141,7 @@ export default async function VentasPage({
                       {formatPen(neto(i))}
                     </span>
                     <span className="hidden md:block">
-                      {i.detraccion ? <Chip>{i.detraccion.status}</Chip> : <span className="text-xs text-ink3">No aplica</span>}
+                      {i.detraccion ? <DetraccionChip status={i.detraccion.status} /> : <span className="text-xs text-ink3">No aplica</span>}
                     </span>
                     <span aria-hidden className="hidden text-ink3 transition group-open:rotate-90 md:block">
                       ›
@@ -152,7 +154,8 @@ export default async function VentasPage({
                       <D k="Total" v={formatPen(i.totalCents)} strong />
                       {i.foreign && (
                         <>
-                          <D k={`Bruto en dólares (TC ${i.foreign.exchangeRate})`} v={formatUsd(i.foreign.grossCents)} />
+                          <D k="Bruto en dólares" v={formatUsd(i.foreign.grossCents)} />
+                          <D k="Tipo de cambio usado" v={i.foreign.exchangeRate.toFixed(3)} />
                           <D k="Retención en el exterior" v={`− ${formatUsd(i.foreign.withholdingCents)}`} />
                         </>
                       )}
@@ -171,14 +174,40 @@ export default async function VentasPage({
                       />
                     </dl>
                     <div className="space-y-2">
+                      {i.foreign?.rateInfo && (
+                        <p className="text-xs text-ink3">
+                          {i.foreign.rateInfo.source === 'MANUAL'
+                            ? 'Tipo de cambio escrito a mano.'
+                            : `Tipo de cambio: ${i.foreign.rateInfo.source}, promedio ${i.foreign.rateInfo.kind} de ${i.foreign.rateInfo.dates.map((d, k) => `${formatFechaCorta(d).replace(/ \d{4}$/, '')} (${i.foreign?.rateInfo?.values[k]?.toFixed(3)})`).join(', ')}${i.foreign.rateInfo.provisional ? ' · provisional' : ''}.`}
+                        </p>
+                      )}
+                      {i.kind === 'RXH' && !i.foreign && clientById.get(i.clientId)?.currency === 'USD' && (
+                        <div className="rounded-lg bg-warn-soft p-3 text-xs text-warn">
+                          <p className="mb-2">Este recibo está solo en soles, pero a este cliente le cobras en dólares.</p>
+                          <CompletarDolares
+                            invoiceId={i._id}
+                            issueDate={i.issueDate}
+                            retencionExteriorRate={clientById.get(i.clientId)?.retencionExteriorRate ?? 0}
+                          />
+                        </div>
+                      )}
                       {i.detraccion ? (
                         <>
                           <p className="text-ink2">
                             Plazo del depósito: <b className="text-ink">{formatFechaCorta(i.detraccion.depositDueDate)}</b>
                           </p>
+                          {i.detraccion.status !== 'DEPOSITED' && (
+                            <p className="text-xs leading-relaxed text-ink3">
+                              Esto es solo la detracción (el 12% que va al Banco de la Nación), no el cobro de la
+                              factura. Si ya se depositó, por ejemplo porque ya la usaste para pagar tu F.621,
+                              regístrala (el número de constancia es opcional) para que deje de figurar pendiente.
+                            </p>
+                          )}
                           {i.detraccion.status === 'DEPOSITED' ? (
                             <p className="text-ok">
-                              Depositada · constancia {i.detraccion.constanciaNumber ?? '—'}
+                              Depositada
+                              {i.detraccion.constanciaNumber && ` · constancia ${i.detraccion.constanciaNumber}`}
+                              {i.detraccion.reference && ` · ${i.detraccion.reference}`}
                             </p>
                           ) : (
                             <DetraccionDeposit invoiceId={i._id} expectedCents={i.detraccion.amountCents} />

@@ -11,10 +11,13 @@ export function DrawerButton({
   label,
   title,
   children,
+  small,
 }: {
   label: string;
   title: string;
   children: React.ReactNode;
+  /** Botón secundario compacto (acciones dentro de una tarjeta), sin el "+". */
+  small?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const close = () => setOpen(false);
@@ -34,9 +37,17 @@ export function DrawerButton({
     <>
       <button
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3.5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-brand-hover"
+        className={
+          small
+            ? 'rounded-lg bg-brand px-3 py-1.5 text-sm font-semibold text-white hover:bg-brand-hover'
+            : 'inline-flex items-center gap-1.5 rounded-lg bg-brand px-3.5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-brand-hover'
+        }
       >
-        <span aria-hidden className="text-base leading-none">+</span>
+        {!small && (
+          <span aria-hidden className="text-base leading-none">
+            +
+          </span>
+        )}
         {label}
       </button>
       {open && (

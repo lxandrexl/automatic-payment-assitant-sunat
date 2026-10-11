@@ -15,6 +15,12 @@ export interface PeriodSummary {
   pago616Cents: number;
 }
 
+export interface FormPayment {
+  paidAt: string;
+  amountCents: number;
+  ref: string;
+}
+
 export interface Period {
   _id: string;
   year: number;
@@ -22,6 +28,9 @@ export interface Period {
   dueDate: string;
   dueDateSource: 'OFFICIAL' | 'ESTIMATED';
   status: 'OPEN' | 'DECLARED' | 'PAID';
+  /** F.621 y F.616 se pagan por separado. */
+  f621Payment?: FormPayment | null;
+  f616Payment?: FormPayment | null;
   summary?: PeriodSummary;
 }
 
@@ -32,6 +41,7 @@ export interface Detraccion {
   depositDueDate: string;
   depositedAt: string | null;
   constanciaNumber: string | null;
+  reference?: string;
   status: 'PENDING' | 'DEPOSITED' | 'OVERDUE';
 }
 
@@ -49,7 +59,14 @@ export interface Invoice {
   detraccion: Detraccion | null;
   retencion: { amountCents: number } | null;
   /** RxH cobrado en moneda extranjera (montos en céntimos de esa moneda; baseCents va en soles). */
-  foreign?: { currency: 'USD'; grossCents: number; exchangeRate: number; withholdingCents: number } | null;
+  foreign?: {
+    currency: 'USD';
+    grossCents: number;
+    exchangeRate: number;
+    withholdingCents: number;
+    /** De dónde salió el tipo de cambio (SUNAT, días promediados) o MANUAL. */
+    rateInfo?: { source: string; kind: 'venta' | 'compra'; dates: string[]; values: number[]; provisional: boolean } | null;
+  } | null;
   status: 'ISSUED' | 'PAID' | 'VOIDED';
 }
 
@@ -169,6 +186,7 @@ export interface Dashboard {
     source: string;
     status: string;
     summary: PeriodSummary | null;
+    pagos?: { f621: FormPayment | null; f616: FormPayment | null };
   } | null;
   currentPeriod: { period: string; summary: PeriodSummary } | null;
   detracciones: {

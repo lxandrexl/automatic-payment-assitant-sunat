@@ -56,4 +56,22 @@ describe('plantillas', () => {
     expect(msg).toContain('lun 10/08/2026');
     expect(msg).toContain('constancia');
   });
+
+  it('con F.621 ya pagado, el recordatorio habla solo del F.616 pendiente', () => {
+    const msg = dueReminderMsg({
+      period: '2026-09',
+      dueDateIso: '2026-10-15',
+      daysBefore: 1,
+      estimated: false,
+      igvPagarCents: 126000,
+      pagoCuentaCents: 8000,
+      npsEstimadoCents: 94000,
+      pago616Cents: 76900,
+      f621Pagado: true,
+    });
+    expect(msg).toContain('F.616');
+    expect(msg).toContain('S/ 769.00');
+    expect(msg).not.toContain('F.621');
+    expect(msg).not.toContain('IGV a pagar');
+  });
 });

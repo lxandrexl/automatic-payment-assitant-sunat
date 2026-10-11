@@ -1,5 +1,5 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
-import { CreateInvoiceDto, DetraccionDepositDto, UpdateInvoiceDto } from './invoices.dto';
+import { CompleteForeignDto, CreateInvoiceDto, DetraccionDepositDto, UpdateInvoiceDto } from './invoices.dto';
 import { InvoicesService } from './invoices.service';
 
 @Controller('invoices')
@@ -19,6 +19,11 @@ export class InvoicesController {
   @Patch(':id')
   update(@Param('id') id: string, @Body() dto: UpdateInvoiceDto) {
     return this.service.update(id, dto);
+  }
+
+  @Patch(':id/foreign')
+  foreign(@Param('id') id: string, @Body() dto: CompleteForeignDto) {
+    return this.service.completeForeign(id, dto);
   }
 
   @Post(':id/detraccion-deposit')
