@@ -62,6 +62,7 @@ class DashboardService {
             source: nextDue.dueDateSource,
             status: nextDue.status,
             summary: nextDueSummary,
+            pagos: { f621: nextDue.f621Payment ?? null, f616: nextDue.f616Payment ?? null },
           }
         : null,
       currentPeriod: currentSummary ? { period: currentPeriodId, summary: currentSummary } : null,

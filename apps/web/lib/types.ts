@@ -15,6 +15,12 @@ export interface PeriodSummary {
   pago616Cents: number;
 }
 
+export interface FormPayment {
+  paidAt: string;
+  amountCents: number;
+  ref: string;
+}
+
 export interface Period {
   _id: string;
   year: number;
@@ -22,6 +28,9 @@ export interface Period {
   dueDate: string;
   dueDateSource: 'OFFICIAL' | 'ESTIMATED';
   status: 'OPEN' | 'DECLARED' | 'PAID';
+  /** F.621 y F.616 se pagan por separado. */
+  f621Payment?: FormPayment | null;
+  f616Payment?: FormPayment | null;
   summary?: PeriodSummary;
 }
 
@@ -169,6 +178,7 @@ export interface Dashboard {
     source: string;
     status: string;
     summary: PeriodSummary | null;
+    pagos?: { f621: FormPayment | null; f616: FormPayment | null };
   } | null;
   currentPeriod: { period: string; summary: PeriodSummary } | null;
   detracciones: {

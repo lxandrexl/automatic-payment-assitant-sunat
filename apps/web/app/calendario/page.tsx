@@ -69,7 +69,7 @@ export default async function CalendarioPage({
               <span className="w-24 text-right">Estado</span>
             </div>
             {meses.map((m) => {
-              const st = monthStatus(m.existing?.status, m.due.date, today);
+              const st = monthStatus(m.existing, m.due.date, today);
               const esProximo = proximo?.period === m.period;
               const pasado = !m.existing && m.due.date < today;
               const monto = m.existing?.summary?.npsEstimadoCents;
@@ -143,14 +143,20 @@ export default async function CalendarioPage({
 }
 
 function monthStatus(
-  status: string | undefined,
+  period: Period | undefined,
   dueIso: string,
   today: string,
 ): { label: string; cls: string } {
+  const status = period?.status;
   if (status === 'PAID') return { label: 'Pagado', cls: 'bg-ok-soft text-ok' };
   if (status === 'DECLARED') return { label: 'Declarado', cls: 'bg-info-soft text-info' };
   if (status === 'OPEN') {
     const d = diasHasta(today, dueIso);
+    if (period?.f621Payment || period?.f616Payment) {
+      // F.621 y F.616 se pagan por separado: mostrar cuál falta.
+      const falta = period.f621Payment ? 'Falta F.616' : 'Falta F.621';
+      return { label: falta, cls: d < 0 ? 'bg-bad-soft text-bad' : 'bg-info-soft text-info' };
+    }
     if (d < 0) return { label: 'Vencido', cls: 'bg-bad-soft text-bad' };
     return { label: 'Pendiente', cls: d <= 3 ? 'bg-bad-soft text-bad' : 'bg-warn-soft text-warn' };
   }

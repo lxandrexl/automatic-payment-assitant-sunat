@@ -20,6 +20,9 @@ export async function dueReminders(): Promise<void> {
     const fire = remindersToFire(today, dueIso, reminderDays);
     if (fire.length === 0) continue;
     const summary = await summaryOf(periodId, calc);
+    // F.621 y F.616 se pagan por separado: no recordar lo que ya se pagó.
+    const pagos = p as { f621Payment?: unknown; f616Payment?: unknown };
+    const f621Pagado = !!pagos.f621Payment;
     for (const n of fire) {
       const msg = dueReminderMsg({
         period: periodId,
@@ -29,7 +32,8 @@ export async function dueReminders(): Promise<void> {
         igvPagarCents: summary.igvPagarCents,
         pagoCuentaCents: summary.pagoCuentaCents,
         npsEstimadoCents: summary.npsEstimadoCents,
-        pago616Cents: summary.pago616Cents,
+        pago616Cents: pagos.f616Payment ? 0 : summary.pago616Cents,
+        f621Pagado,
       });
       const sent = await sendOnce(`due:${periodId}:T-${n}`, 'DUE_REMINDER', msg);
       if (sent) logger.info({ period: periodId, n }, 'recordatorio de vencimiento enviado');

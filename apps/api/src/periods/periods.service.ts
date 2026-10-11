@@ -16,6 +16,13 @@ import { Period, PeriodDocument } from '../schemas/period.schema';
 import { Purchase, PurchaseDocument } from '../schemas/purchase.schema';
 import { SettingsService } from '../settings/settings.service';
 
+export type PayableForm = 'f621' | 'f616';
+export interface PaymentInput {
+  paidAt: string; // YYYY-MM-DD
+  amountCents: number;
+  ref?: string;
+}
+
 @Injectable()
 export class PeriodsService {
   constructor(
@@ -92,6 +99,37 @@ export class PeriodsService {
     doc.status = paymentRef ? 'PAID' : 'DECLARED';
     doc.declaredAt = declaredAt ? new Date(declaredAt) : new Date();
     if (paymentRef) doc.paymentRef = paymentRef;
+    return doc.save();
+  }
+
+  /** Registra el pago de un formulario (F.621 o F.616) y recalcula el estado del mes. */
+  async registerPayment(period: string, form: PayableForm, dto: PaymentInput) {
+    const doc = await this.findById(period);
+    const payment = { paidAt: limaIsoToDate(dto.paidAt), amountCents: dto.amountCents, ref: dto.ref ?? '' };
+    if (form === 'f621') doc.f621Payment = payment;
+    else doc.f616Payment = payment;
+    return this.refreshStatus(doc);
+  }
+
+  /** Deshace el pago de un formulario (corrección de un registro equivocado). */
+  async clearPayment(period: string, form: PayableForm) {
+    const doc = await this.findById(period);
+    if (form === 'f621') doc.f621Payment = null;
+    else doc.f616Payment = null;
+    return this.refreshStatus(doc);
+  }
+
+  // El mes queda PAID cuando se pagó el F.621 y, si hay F.616 que pagar, también el F.616.
+  private async refreshStatus(doc: PeriodDocument) {
+    const summary = await this.summaryOf(doc._id);
+    const need616 = summary.pago616Cents > 0 || !!doc.f616Payment;
+    const paidAll = !!doc.f621Payment && (!need616 || !!doc.f616Payment);
+    if (paidAll) {
+      doc.status = 'PAID';
+      if (!doc.declaredAt) doc.declaredAt = doc.f621Payment!.paidAt;
+    } else if (doc.status === 'PAID') {
+      doc.status = 'OPEN';
+    }
     return doc.save();
   }
 

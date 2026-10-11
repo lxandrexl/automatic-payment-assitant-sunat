@@ -123,6 +123,11 @@ function NextPayment({
   const tone = urgencyTone(days);
   const accent = tone === 'urgent' ? 'text-bad' : tone === 'warn' ? 'text-warn' : 'text-ok';
   const s = nextDue.summary;
+  // Pagos ya registrados: el F.621 y el F.616 se pagan por separado.
+  const f621Hecho = !!nextDue.pagos?.f621;
+  const f616Hecho = !!nextDue.pagos?.f616;
+  const monto621 = f621Hecho ? 0 : (s?.npsEstimadoCents ?? 0);
+  const monto616 = f616Hecho ? 0 : (s?.pago616Cents ?? 0);
 
   return (
     <Card tone={tone}>
@@ -141,10 +146,15 @@ function NextPayment({
         <div className="sm:text-right">
           <div className="text-xs text-ink3">Monto a pagar</div>
           <div className="text-3xl font-semibold tabular-nums text-ink">
-            {formatPen(s ? s.npsEstimadoCents : 0)}
+            {formatPen(monto621)}
           </div>
-          {s && s.pago616Cents > 0 && (
-            <div className="text-xs text-ink3">+ {formatPen(s.pago616Cents)} de honorarios</div>
+          {monto616 > 0 && (
+            <div className="text-xs text-ink3">+ {formatPen(monto616)} de honorarios (F.616)</div>
+          )}
+          {(f621Hecho || f616Hecho) && (
+            <div className="text-xs text-ok">
+              {f621Hecho ? 'F.621 ya pagado' : 'F.616 ya pagado'}
+            </div>
           )}
         </div>
       </div>
