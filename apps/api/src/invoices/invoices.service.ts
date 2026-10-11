@@ -4,6 +4,7 @@ import { Model, Types } from 'mongoose';
 import {
   computeFactura,
   computeRxh,
+  computeRxhExterior,
   detraccionDepositDueDate,
   isDetraccionDepositMatch,
   limaIsoToDate,
@@ -64,13 +65,33 @@ export class InvoicesService {
     const settingsDoc = await this.settings.get();
     const client = settingsDoc.clients.find((c) => c._id.equals(dto.clientId));
     const pagadorRetiene = client?.domiciliado !== false;
-    const r = computeRxh(dto.baseCents, s, pagadorRetiene);
+
+    // Cobro en moneda extranjera: el impuesto en Perú va sobre el BRUTO convertido;
+    // lo que el cliente retiene en su país solo reduce lo que llega al banco.
+    let foreign: { currency: 'USD'; grossCents: number; exchangeRate: number; withholdingCents: number } | null =
+      null;
+    let baseCents = dto.baseCents;
+    if (dto.foreignGrossCents != null) {
+      if (!dto.exchangeRate) throw new BadRequestException('Falta el tipo de cambio');
+      const x = computeRxhExterior(dto.foreignGrossCents, dto.exchangeRate, client?.retencionExteriorRate ?? 0);
+      baseCents = x.baseCents;
+      foreign = {
+        currency: 'USD',
+        grossCents: dto.foreignGrossCents,
+        exchangeRate: dto.exchangeRate,
+        withholdingCents: x.retencionExteriorFxCents,
+      };
+    }
+
+    const r = computeRxh(baseCents, s, pagadorRetiene);
     return this.model.create({
       ...base,
+      baseCents,
       igvCents: 0,
-      totalCents: dto.baseCents,
+      totalCents: baseCents,
       detraccion: null,
       retencion: { amountCents: r.retencionCents },
+      foreign,
     });
   }
 

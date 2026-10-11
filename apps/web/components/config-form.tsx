@@ -20,7 +20,7 @@ export function ConfigForm({ settings }: { settings: Settings }) {
   const [busy, setBusy] = useState(false);
 
   const inputCls =
-    'w-full rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm outline-none focus:border-emerald-500';
+    'w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm outline-none focus:border-brand';
 
   async function save() {
     setBusy(true);
@@ -62,51 +62,62 @@ export function ConfigForm({ settings }: { settings: Settings }) {
   }
 
   return (
-    <div className="space-y-4">
-      <Card title="Configuración">
-        <div className="space-y-3">
-          <Field label="RUC (solo lectura)">
-            <input value={`${settings.ruc} · dígito ${settings.rucLastDigit}`} disabled className={`${inputCls} opacity-60`} />
-          </Field>
-          <Field label="UIT (S/)">
-            <input type="number" value={uitSoles} onChange={(e) => setUitSoles(e.target.value)} className={inputCls} />
-          </Field>
-          <Field label="Otros gastos anuales del negocio (S/)">
-            <input type="number" value={otrosGastosSoles} onChange={(e) => setOtrosGastosSoles(e.target.value)} className={inputCls} />
-          </Field>
-          <Field label="Gastos deducibles 3 UIT acreditados (S/, persona natural)">
-            <input type="number" value={gastos3UitSoles} onChange={(e) => setGastos3UitSoles(e.target.value)} className={inputCls} />
-          </Field>
-          <Field label="Cuenta detracciones (Banco de la Nación)">
-            <input value={bnAccount} onChange={(e) => setBnAccount(e.target.value)} className={inputCls} />
-          </Field>
-          <Field label="Chat ID de Telegram">
-            <input value={chatId} onChange={(e) => setChatId(e.target.value)} className={inputCls} />
-          </Field>
-          <Field label="Días de recordatorio (coma-separados)">
-            <input value={reminderDays} onChange={(e) => setReminderDays(e.target.value)} className={inputCls} />
-          </Field>
-        </div>
+    <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
+      <div className="space-y-6">
+        <Card title="Tus datos tributarios">
+          <div className="space-y-4">
+            <Field label="RUC" hint="Lo define tu cuenta; no se edita aquí. El último dígito decide tus fechas de vencimiento.">
+              <input value={`${settings.ruc} · último dígito ${settings.rucLastDigit}`} disabled className={`${inputCls} opacity-60`} />
+            </Field>
+            <Field label="Valor de la UIT (S/)" hint="Lo fija SUNAT cada año. Muchos límites del impuesto se miden en UIT.">
+              <input type="number" value={uitSoles} onChange={(e) => setUitSoles(e.target.value)} className={inputCls} />
+            </Field>
+            <Field label="Cuenta de detracciones (Banco de la Nación)" hint="Opcional. Solo para tu referencia.">
+              <input value={bnAccount} onChange={(e) => setBnAccount(e.target.value)} className={inputCls} />
+            </Field>
+          </div>
+        </Card>
 
-        {msg && <p className="mt-3 text-sm text-emerald-400">{msg}</p>}
+        <Card title="Gastos para el cálculo anual">
+          <div className="space-y-4">
+            <Field label="Otros gastos anuales del negocio (S/)" hint="Gastos deducibles que no registras en Compras. Bajan la ganancia del negocio y por tanto el impuesto.">
+              <input type="number" value={otrosGastosSoles} onChange={(e) => setOtrosGastosSoles(e.target.value)} className={inputCls} />
+            </Field>
+            <Field label="Gastos personales deducibles (S/)" hint="Hasta 3 UIT en total (salud, alquiler, restaurantes…) con comprobante electrónico y pago bancario. Bajan el impuesto de tus honorarios.">
+              <input type="number" value={gastos3UitSoles} onChange={(e) => setGastos3UitSoles(e.target.value)} className={inputCls} />
+            </Field>
+          </div>
+        </Card>
 
-        <div className="mt-4 flex gap-2">
+        <Card title="Avisos">
+          <div className="space-y-4">
+            <Field label="Chat ID de Telegram" hint="Dónde te llegan los recordatorios. Lo obtienes con tu bot de Telegram.">
+              <input value={chatId} onChange={(e) => setChatId(e.target.value)} className={inputCls} />
+            </Field>
+            <Field label="Días de aviso antes del vencimiento" hint="Separados por coma. Ejemplo: 7, 3, 1 = te avisa a 7, 3 y 1 día antes.">
+              <input value={reminderDays} onChange={(e) => setReminderDays(e.target.value)} className={inputCls} />
+            </Field>
+          </div>
+        </Card>
+
+        <div className="flex flex-wrap items-center gap-3">
           <button
             onClick={save}
             disabled={busy}
-            className="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
+            className="rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-hover disabled:opacity-50"
           >
-            Guardar
+            {busy ? 'Guardando…' : 'Guardar cambios'}
           </button>
           <button
             onClick={testNotify}
             disabled={busy}
-            className="rounded-lg bg-neutral-800 px-3 py-2 text-sm font-medium text-white hover:bg-neutral-700 disabled:opacity-50"
+            className="rounded-lg bg-sunken px-4 py-2.5 text-sm font-medium text-ink hover:bg-line disabled:opacity-50"
           >
-            Enviar notificación de prueba
+            Enviar aviso de prueba
           </button>
+          {msg && <span className="text-sm text-ok">{msg}</span>}
         </div>
-      </Card>
+      </div>
 
       <ClientsEditor clients={settings.clients} />
     </div>
@@ -121,11 +132,13 @@ function ClientsEditor({ clients }: { clients: Settings['clients'] }) {
     kind: 'FACTURA' as 'FACTURA' | 'RXH',
     baseSoles: '9000',
     domiciliado: true,
+    currency: 'PEN' as 'PEN' | 'USD',
+    retExtPct: '0',
   });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const inputCls =
-    'w-full rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm outline-none focus:border-emerald-500';
+    'w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm outline-none focus:border-brand';
 
   // El PATCH reemplaza el array completo: mandamos los existentes + el nuevo (o menos el borrado).
   async function saveClients(next: object[]) {
@@ -149,31 +162,40 @@ function ClientsEditor({ clients }: { clients: Settings['clients'] }) {
     kind: c.kind,
     defaultBaseCents: c.defaultBaseCents,
     domiciliado: c.domiciliado !== false,
+    currency: c.currency ?? 'PEN',
+    retencionExteriorRate: c.retencionExteriorRate ?? 0,
   }));
 
   return (
-    <Card title="Clientes">
+    <Card title="Tus clientes">
       {clients.length === 0 ? (
-        <p className="text-sm text-neutral-400">Sin clientes configurados.</p>
+        <p className="mb-3 text-sm text-ink2">Todavía no agregaste clientes. Agrega uno abajo para poder emitir comprobantes.</p>
       ) : (
-        <ul className="mb-3 space-y-1 text-sm">
+        <ul className="mb-4 text-sm">
           {clients.map((c, idx) => (
-            <li key={c._id} className="flex items-center justify-between border-t border-neutral-800 py-1">
+            <li key={c._id} className="flex items-center justify-between gap-3 border-t border-line py-2.5">
               <span>
-                {c.name} <span className="text-neutral-500">· {c.kind}</span>
+                {c.name} <span className="text-ink3">· {c.kind === 'FACTURA' ? 'Factura' : 'Recibo por honorarios'}</span>
+                {c.currency === 'USD' && (
+                  <span className="ml-2 rounded bg-hono-soft px-1.5 text-xs text-hono">
+                    en dólares
+                    {c.retencionExteriorRate ? ` · retiene ${Math.round(c.retencionExteriorRate * 100)}%` : ''}
+                  </span>
+                )}
                 {c.domiciliado === false && (
-                  <span className="ml-2 rounded bg-sky-500/15 px-1.5 text-xs text-sky-400">
+                  <span className="ml-2 rounded bg-info-soft px-1.5 text-xs text-info">
                     no domiciliado
                   </span>
                 )}
               </span>
               <span className="flex items-center gap-2">
-                <span className="text-neutral-500">{c.ruc}</span>
+                <span className="text-ink3">{c.ruc}</span>
                 <button
                   onClick={() => saveClients(existing.filter((_, i) => i !== idx))}
                   disabled={busy}
-                  className="text-red-400 hover:text-red-300"
+                  className="rounded px-1.5 text-ink3 hover:bg-bad-soft hover:text-bad"
                   title="Eliminar cliente"
+                  aria-label="Eliminar cliente"
                 >
                   ✕
                 </button>
@@ -183,7 +205,8 @@ function ClientsEditor({ clients }: { clients: Settings['clients'] }) {
         </ul>
       )}
 
-      <div className="grid grid-cols-2 gap-2 border-t border-neutral-800 pt-3">
+      <div className="grid grid-cols-2 gap-2 border-t border-line pt-4">
+        <p className="col-span-2 text-sm font-medium text-ink">Agregar un cliente</p>
         <input
           value={form.name}
           onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
@@ -202,7 +225,7 @@ function ClientsEditor({ clients }: { clients: Settings['clients'] }) {
           className={inputCls}
         >
           <option value="FACTURA">Factura</option>
-          <option value="RXH">RxH</option>
+          <option value="RXH">Recibo por honorarios</option>
         </select>
         <input
           type="number"
@@ -211,7 +234,7 @@ function ClientsEditor({ clients }: { clients: Settings['clients'] }) {
           placeholder="Base típica (S/)"
           className={inputCls}
         />
-        <label className="col-span-2 flex items-center gap-2 px-1 text-sm text-neutral-300">
+        <label className="col-span-2 flex items-center gap-2 px-1 text-sm text-ink2">
           <input
             type="checkbox"
             checked={form.domiciliado}
@@ -219,8 +242,31 @@ function ClientsEditor({ clients }: { clients: Settings['clients'] }) {
           />
           Domiciliado en Perú (desmarca para clientes del exterior — RxH sin retención)
         </label>
+        <select
+          value={form.currency}
+          onChange={(e) => setForm((f) => ({ ...f, currency: e.target.value as 'PEN' | 'USD' }))}
+          className={inputCls}
+          aria-label="Moneda en que le cobras"
+        >
+          <option value="PEN">Le cobro en soles</option>
+          <option value="USD">Le cobro en dólares</option>
+        </select>
+        <input
+          type="number"
+          min="0"
+          max="100"
+          value={form.retExtPct}
+          onChange={(e) => setForm((f) => ({ ...f, retExtPct: e.target.value }))}
+          placeholder="Retención en su país (%)"
+          className={inputCls}
+          aria-label="Retención que el cliente hace en su país (%)"
+        />
+        <p className="col-span-2 -mt-1 text-xs text-ink3">
+          “Retención en su país”: el % que tu cliente descuenta allá antes de pagarte (por ejemplo
+          10%). Reduce lo que llega a tu banco, pero en Perú sigues declarando el monto completo.
+        </p>
       </div>
-      {err && <p className="mt-2 text-sm text-red-400">{err}</p>}
+      {err && <p className="mt-2 text-sm text-bad">{err}</p>}
       <button
         onClick={() =>
           saveClients([
@@ -231,11 +277,13 @@ function ClientsEditor({ clients }: { clients: Settings['clients'] }) {
               kind: form.kind,
               defaultBaseCents: Math.round(Number(form.baseSoles) * 100),
               domiciliado: form.domiciliado,
+              currency: form.currency,
+              retencionExteriorRate: Math.min(100, Math.max(0, Number(form.retExtPct) || 0)) / 100,
             },
           ]).then(() => setForm((f) => ({ ...f, name: '', ruc: '' })))
         }
         disabled={busy || !form.name || !form.ruc}
-        className="mt-3 w-full rounded-lg bg-neutral-800 px-3 py-2 text-sm font-medium text-white hover:bg-neutral-700 disabled:opacity-50"
+        className="mt-3 w-full rounded-lg bg-sunken px-3 py-2 text-sm font-medium text-ink hover:bg-line disabled:opacity-50"
       >
         {busy ? 'Guardando…' : 'Agregar cliente'}
       </button>
@@ -243,11 +291,12 @@ function ClientsEditor({ clients }: { clients: Settings['clients'] }) {
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
     <label className="block">
-      <span className="mb-1 block text-xs text-neutral-400">{label}</span>
+      <span className="mb-1 block text-sm font-medium text-ink">{label}</span>
       {children}
+      {hint && <span className="mt-1 block text-xs leading-relaxed text-ink3">{hint}</span>}
     </label>
   );
 }

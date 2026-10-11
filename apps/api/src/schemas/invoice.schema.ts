@@ -20,6 +20,16 @@ export class Retencion {
 }
 const RetencionSchema = SchemaFactory.createForClass(Retencion);
 
+// RxH cobrado en moneda extranjera: montos en céntimos de ESA moneda. baseCents sigue en soles.
+@Schema({ _id: false })
+export class Foreign {
+  @Prop({ required: true, enum: ['USD'] }) currency!: 'USD';
+  @Prop({ required: true }) grossCents!: number;
+  @Prop({ required: true }) exchangeRate!: number;
+  @Prop({ required: true }) withholdingCents!: number; // retenido en el exterior
+}
+const ForeignSchema = SchemaFactory.createForClass(Foreign);
+
 @Schema({ timestamps: true, collection: 'invoices' })
 export class Invoice {
   @Prop({ required: true, index: true }) period!: string;
@@ -33,6 +43,7 @@ export class Invoice {
   @Prop({ required: true }) totalCents!: number;
   @Prop({ type: DetraccionSchema, default: null }) detraccion!: Detraccion | null;
   @Prop({ type: RetencionSchema, default: null }) retencion!: Retencion | null;
+  @Prop({ type: ForeignSchema, default: null }) foreign!: Foreign | null;
   @Prop({ type: Date, default: null }) paidAt!: Date | null;
   @Prop({ default: 'ISSUED', enum: ['ISSUED', 'PAID', 'VOIDED'] })
   status!: 'ISSUED' | 'PAID' | 'VOIDED';

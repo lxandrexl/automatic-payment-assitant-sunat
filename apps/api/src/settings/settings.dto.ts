@@ -5,8 +5,10 @@ import {
   IsEmail,
   IsIn,
   IsInt,
+  IsNumber,
   IsOptional,
   IsString,
+  Max,
   Min,
   ValidateNested,
 } from 'class-validator';
@@ -19,6 +21,8 @@ class ClientDto {
   @IsIn(['FACTURA', 'RXH']) kind!: 'FACTURA' | 'RXH';
   @IsInt() @Min(0) defaultBaseCents!: number;
   @IsOptional() @IsBoolean() domiciliado?: boolean;
+  @IsOptional() @IsIn(['PEN', 'USD']) currency?: 'PEN' | 'USD';
+  @IsOptional() @IsNumber() @Min(0) @Max(1) retencionExteriorRate?: number;
 }
 
 class NotifyDto {

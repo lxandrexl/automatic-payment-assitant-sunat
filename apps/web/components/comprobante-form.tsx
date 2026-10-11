@@ -2,11 +2,12 @@
 
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
-import { computeFactura, computeRxh, toCents } from '@tributo/core';
-import { formatPen } from '@/lib/format';
+import { computeFactura, computeRxh, computeRxhExterior, toCents } from '@tributo/core';
+import { formatPen, formatUsd } from '@/lib/format';
 import { mutate } from '@/lib/mutate';
+import { useDrawerClose } from '@/components/drawer';
 import type { Client } from '@/lib/types';
-import { Card, Field, inputCls, Row } from '@/components/ui';
+import { Field, inputCls, Row } from '@/components/ui';
 
 interface Props {
   clients: Client[];
@@ -18,17 +19,26 @@ interface Props {
 
 export function ComprobanteForm(props: Props) {
   const router = useRouter();
+  const closeDrawer = useDrawerClose();
   const [kind, setKind] = useState<'FACTURA' | 'RXH'>('FACTURA');
   const [clientId, setClientId] = useState('');
   const [series, setSeries] = useState('E001');
   const [number, setNumber] = useState('');
   const [issueDate, setIssueDate] = useState(new Date().toISOString().slice(0, 10));
   const [baseSoles, setBaseSoles] = useState('9000');
+  const [tc, setTc] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
-  const baseCents = toCents(Number(baseSoles) || 0);
   const selectedClient = props.clients.find((c) => c._id === clientId);
+  // RxH a un cliente que paga en dólares: se ingresa en US$ + tipo de cambio.
+  const enDolares = kind === 'RXH' && selectedClient?.currency === 'USD';
+  const tcNum = Number(tc) || 0;
+  const montoCents = toCents(Number(baseSoles) || 0); // en la moneda ingresada (S/ o US$)
+  const ext = enDolares
+    ? computeRxhExterior(montoCents, tcNum, selectedClient?.retencionExteriorRate ?? 0)
+    : null;
+  const baseCents = ext ? ext.baseCents : montoCents;
   const pagadorRetiene = selectedClient?.domiciliado !== false;
   const calc = useMemo(() => {
     const s = {
@@ -47,9 +57,18 @@ export function ComprobanteForm(props: Props) {
     setBusy(true);
     setErr(null);
     try {
-      await mutate('/invoices', 'POST', { kind, clientId, series, number, issueDate, baseCents });
+      await mutate('/invoices', 'POST', {
+        kind,
+        clientId,
+        series,
+        number,
+        issueDate,
+        baseCents,
+        ...(enDolares ? { foreignGrossCents: montoCents, exchangeRate: tcNum } : {}),
+      });
       setNumber('');
       router.refresh();
+      closeDrawer();
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Error');
     } finally {
@@ -58,7 +77,7 @@ export function ComprobanteForm(props: Props) {
   }
 
   return (
-    <Card title="Nuevo comprobante">
+    <div>
       <div className="grid grid-cols-2 gap-3">
         <Field label="Tipo">
           <select value={kind} onChange={(e) => setKind(e.target.value as 'FACTURA' | 'RXH')} className={inputCls}>
@@ -85,12 +104,28 @@ export function ComprobanteForm(props: Props) {
         <Field label="Fecha de emisión">
           <input type="date" value={issueDate} onChange={(e) => setIssueDate(e.target.value)} className={inputCls} />
         </Field>
-        <Field label={kind === 'FACTURA' ? 'Base imponible (S/)' : 'Monto bruto (S/)'}>
+        <Field label={kind === 'FACTURA' ? 'Base imponible (S/)' : enDolares ? 'Monto bruto (US$)' : 'Monto bruto (S/)'}>
           <input type="number" value={baseSoles} onChange={(e) => setBaseSoles(e.target.value)} placeholder="9000" className={inputCls} />
         </Field>
+        {enDolares && (
+          <Field label="Tipo de cambio (S/ por US$)" full>
+            <input
+              type="number"
+              step="0.001"
+              value={tc}
+              onChange={(e) => setTc(e.target.value)}
+              placeholder="Ej. 3.430"
+              className={inputCls}
+            />
+            <span className="mt-1 block text-xs text-ink3">
+              El de SUNAT (SBS, venta) del día de emisión; con él conviertes los dólares a soles para
+              declarar.
+            </span>
+          </Field>
+        )}
       </div>
 
-      <div className="mt-4 rounded-xl border border-neutral-800 bg-neutral-950 p-3">
+      <div className="mt-4 rounded-xl border border-line bg-surface p-3">
         {calc.kind === 'FACTURA' ? (
           <>
             <Row label="Base" value={formatPen(baseCents)} />
@@ -109,6 +144,18 @@ export function ComprobanteForm(props: Props) {
             />
           </>
         ) : (
+          ext ? (
+            <>
+              <Row label="Bruto (lo que declaras en Perú)" value={`${formatUsd(montoCents)} = ${formatPen(ext.baseCents)}`} />
+              <Row label={`Retención en su país (${Math.round((selectedClient?.retencionExteriorRate ?? 0) * 100)}%)`} value={`− ${formatUsd(ext.retencionExteriorFxCents)}`} />
+              <Row label="Te llega a tu banco" value={`${formatUsd(ext.netFxCents)} ≈ ${formatPen(ext.netCents)}`} strong />
+              <p className="mt-2 rounded bg-info-soft p-2 text-xs text-info">
+                En SUNAT declaras los {formatUsd(montoCents)} completos. El adelanto de renta del 8% (
+                {formatPen(Math.round(baseCents * props.retencion4taRate))}) lo pagas en el F.616 del
+                mes{pagadorRetiene ? '' : ', porque tu cliente no te retiene en Perú'}.
+              </p>
+            </>
+          ) : (
           <>
             <Row label="Bruto" value={formatPen(baseCents)} />
             <Row
@@ -117,24 +164,25 @@ export function ComprobanteForm(props: Props) {
             />
             <Row label="Neto a cobrar" value={formatPen(calc.rxh.netCents)} strong />
             {!pagadorRetiene && (
-              <p className="mt-2 rounded bg-sky-500/10 p-2 text-xs text-sky-300">
+              <p className="mt-2 rounded bg-info-soft p-2 text-xs text-info">
                 Cliente no domiciliado: no te retiene. El 8% (
                 {formatPen(Math.round(baseCents * props.retencion4taRate))}) lo declaras tú en el
                 F.616 del mes — el recordatorio lo incluirá.
               </p>
             )}
           </>
+          )
         )}
       </div>
 
-      {err && <p className="mt-2 text-sm text-red-400">{err}</p>}
+      {err && <p className="mt-2 text-sm text-bad">{err}</p>}
       <button
         onClick={submit}
-        disabled={busy || !clientId || !number}
-        className="mt-3 w-full rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
+        disabled={busy || !clientId || !number || (enDolares && !tcNum)}
+        className="mt-3 w-full rounded-lg bg-brand px-3 py-2 text-sm font-medium text-white hover:bg-brand-hover disabled:opacity-50"
       >
         {busy ? 'Guardando…' : 'Registrar comprobante'}
       </button>
-    </Card>
+    </div>
   );
 }

@@ -1,4 +1,4 @@
-import { IsIn, IsInt, IsOptional, IsString, Min } from 'class-validator';
+import { IsIn, IsInt, IsNumber, IsOptional, IsString, Min } from 'class-validator';
 
 export class CreateInvoiceDto {
   @IsIn(['FACTURA', 'RXH']) kind!: 'FACTURA' | 'RXH';
@@ -7,6 +7,10 @@ export class CreateInvoiceDto {
   @IsString() number!: string;
   @IsString() issueDate!: string; // ISO date
   @IsInt() @Min(0) baseCents!: number;
+  // RxH en moneda extranjera: bruto en céntimos de esa moneda + tipo de cambio.
+  // Si vienen, el servidor recalcula baseCents (soles) a partir de ellos.
+  @IsOptional() @IsInt() @Min(0) foreignGrossCents?: number;
+  @IsOptional() @IsNumber() @Min(0.0001) exchangeRate?: number;
 }
 
 export class UpdateInvoiceDto {

@@ -24,7 +24,7 @@ const TERMS: Term[] = [
   {
     term: 'NPS',
     full: 'Número de Pago SUNAT',
-    def: 'El código con el que pagas tus tributos en el banco/SOL. En el panel, “NPS estimado” = cuánto te toca pagar realmente en el mes, ya descontadas las detracciones disponibles.',
+    def: 'El código con el que pagas tus tributos en el banco/SOL. En el panel, “Pagarías de tu bolsillo” = cuánto te toca pagar realmente en el mes, ya descontadas las detracciones disponibles.',
   },
   {
     term: 'RMT',
@@ -149,16 +149,16 @@ export function Glossary() {
         className={`${inputCls} mb-3`}
       />
       {shown.length === 0 ? (
-        <p className="text-sm text-neutral-500">Sin resultados para “{q}”.</p>
+        <p className="text-sm text-ink3">Sin resultados para “{q}”.</p>
       ) : (
-        <dl className="divide-y divide-neutral-800/70">
+        <dl className="divide-y divide-line">
           {shown.map((t) => (
             <div key={t.term} className="py-2.5">
-              <dt className="text-sm font-semibold text-emerald-400">
+              <dt className="text-sm font-semibold text-brand">
                 {t.term}
-                {t.full && <span className="ml-2 font-normal text-neutral-500">{t.full}</span>}
+                {t.full && <span className="ml-2 font-normal text-ink3">{t.full}</span>}
               </dt>
-              <dd className="mt-0.5 text-sm text-neutral-300">{t.def}</dd>
+              <dd className="mt-0.5 text-sm text-ink2">{t.def}</dd>
             </div>
           ))}
         </dl>
