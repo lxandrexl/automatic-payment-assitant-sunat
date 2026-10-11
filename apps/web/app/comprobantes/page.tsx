@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { apiGet } from '@/lib/api';
 import { formatFechaCorta, formatPen, formatPeriodo, formatUsd } from '@/lib/format';
 import type { Invoice, Settings } from '@/lib/types';
-import { Card, Chip, KindTag, PageHeader, Segmented, Stat } from '@/components/ui';
+import { Card, DetraccionChip, KindTag, PageHeader, Segmented, Stat } from '@/components/ui';
 import { ComprobanteForm } from '@/components/comprobante-form';
 import { CompletarDolares } from '@/components/completar-dolares';
 import { DetraccionDeposit } from '@/components/detraccion-deposit';
@@ -87,10 +87,10 @@ export default async function VentasPage({
         <Stat label="Emitido" value={formatPen(totalEmitido)} hint={`${invoices.length} comprobantes`} />
         <Stat label="Te llega al banco" value={formatPen(totalBanco)} tone="ok" hint="Sin la detracción ni la retención" />
         <Stat
-          label="Detracciones por confirmar"
+          label="Detracciones por registrar"
           value={String(detrPend)}
           tone={detrPend > 0 ? 'info' : 'neutral'}
-          hint={detrPend > 0 ? 'Pide la constancia a tu cliente' : 'Todo al día'}
+          hint={detrPend > 0 ? 'Anota el depósito con su constancia (si ya se depositó, solo falta registrarlo)' : 'Todo al día'}
         />
       </div>
 
@@ -109,7 +109,7 @@ export default async function VentasPage({
               <span>Tipo</span>
               <span className="text-right">Total</span>
               <span className="text-right">Te llega</span>
-              <span>Detracción</span>
+              <span title="El 12% que tu cliente deposita aparte en tu cuenta del Banco de la Nación">Detracción</span>
               <span />
             </div>
             <Paginated pageSize={10} label="comprobantes" className="" footerClass="!mt-0 px-4 pb-4">
@@ -141,7 +141,7 @@ export default async function VentasPage({
                       {formatPen(neto(i))}
                     </span>
                     <span className="hidden md:block">
-                      {i.detraccion ? <Chip>{i.detraccion.status}</Chip> : <span className="text-xs text-ink3">No aplica</span>}
+                      {i.detraccion ? <DetraccionChip status={i.detraccion.status} /> : <span className="text-xs text-ink3">No aplica</span>}
                     </span>
                     <span aria-hidden className="hidden text-ink3 transition group-open:rotate-90 md:block">
                       ›
@@ -196,6 +196,13 @@ export default async function VentasPage({
                           <p className="text-ink2">
                             Plazo del depósito: <b className="text-ink">{formatFechaCorta(i.detraccion.depositDueDate)}</b>
                           </p>
+                          {i.detraccion.status !== 'DEPOSITED' && (
+                            <p className="text-xs leading-relaxed text-ink3">
+                              Esto es solo la detracción (el 12% que va al Banco de la Nación), no el cobro de la
+                              factura. Si ya se depositó, por ejemplo porque ya la usaste para pagar tu F.621,
+                              regístrala con su constancia para que deje de figurar pendiente.
+                            </p>
+                          )}
                           {i.detraccion.status === 'DEPOSITED' ? (
                             <p className="text-ok">
                               Depositada · constancia {i.detraccion.constanciaNumber ?? '—'}

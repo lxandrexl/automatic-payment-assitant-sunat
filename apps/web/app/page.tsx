@@ -12,6 +12,7 @@ import type { Dashboard } from '@/lib/types';
 import {
   Card,
   Chip,
+  DetraccionChip,
   MoreLink,
   PageHeader,
   PrimaryLink,
@@ -175,7 +176,7 @@ function Pending({ d }: { d: Dashboard }) {
     ...d.detracciones.map((x) => ({
       key: x.id,
       href: '/comprobantes',
-      title: `Confirmar depósito de detracción · ${formatPen(x.amountCents)}`,
+      title: `Registrar depósito de detracción · ${formatPen(x.amountCents)}`,
       sub: x.depositDueDate
         ? `Plazo ${formatFechaCorta(x.depositDueDate)} · ${formatPeriodo(x.period)}`
         : formatPeriodo(x.period),
@@ -203,7 +204,7 @@ function Pending({ d }: { d: Dashboard }) {
                 <span className="block text-xs text-ink3">{it.sub}</span>
               </span>
               <span className="flex shrink-0 items-center gap-2">
-                {it.chip && <Chip>{it.chip}</Chip>}
+                {it.chip && <DetraccionChip status={it.chip} />}
                 <span aria-hidden className="text-ink3 group-hover:text-brand">
                   ›
                 </span>

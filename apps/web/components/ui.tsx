@@ -267,3 +267,22 @@ export function KindTag({ kind, long }: { kind: 'FACTURA' | 'RXH'; long?: boolea
     </span>
   );
 }
+
+/**
+ * Estado del depósito de DETRACCIÓN (el 12% que el cliente deposita aparte en tu cuenta del
+ * Banco de la Nación). No es el estado de cobro de la factura: "por registrar" solo significa
+ * que todavía no se anotó la constancia del depósito.
+ */
+export function DetraccionChip({ status }: { status: string }) {
+  const map: Record<string, { label: string; cls: string }> = {
+    DEPOSITED: { label: 'Depositada', cls: 'bg-ok-soft text-ok' },
+    PENDING: { label: 'Depósito por registrar', cls: 'bg-warn-soft text-warn' },
+    OVERDUE: { label: 'Registrar depósito (plazo vencido)', cls: 'bg-bad-soft text-bad' },
+  };
+  const m = map[status] ?? { label: status, cls: 'bg-sunken text-ink2' };
+  return (
+    <span className={`inline-flex whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-medium ${m.cls}`}>
+      {m.label}
+    </span>
+  );
+}
